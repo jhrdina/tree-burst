@@ -1,0 +1,40 @@
+{
+  "name": "tree-burst",
+  "version": "0.0.1",
+  "scripts": {
+    "build": "bsb -make-world",
+    "start": "bsb -make-world -w",
+    "clean": "bsb -clean-world",
+    "webpack": "webpack -w",
+    "webpack:production": "NODE_ENV=production webpack --display-modules",
+    "size-test": "NODE_ENV=production webpack --display-modules && brotli -kf build/Index.js && ( ls -l build/Index.js.br | cut -d\" \" -f5 )",
+    "server": "webpack-dev-server"
+  },
+  "keywords": [
+    "BuckleScript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@jsiebern/bs-material-ui": "^1.0.0",
+    "@material-ui/core": "^3.9.2",
+    "@material-ui/icons": "^3.0.2",
+    "@material-ui/styles": "^3.0.0-alpha.10",
+    "bs-automerge": "file:../bs-automerge-0.1.1.tgz",
+    "bs-black-tea": "^0.2.0",
+    "bs-css": "^8.0.1",
+    "pocket-mesh-peer": "file:../pocket-mesh/pocket-mesh-peer-0.2.2.tgz",
+    "pocket-mesh-peer-material-ui": "file:../pocket-mesh/pocket-mesh-peer-material-ui-0.2.2.tgz",
+    "react": "^16.2.0",
+    "react-dom": "^16.2.0",
+    "react-simple-contenteditable": "0.0.5",
+    "reason-react": ">=0.4.0"
+  },
+  "devDependencies": {
+    "bs-platform": "^4.0.18",
+    "html-webpack-plugin": "^3.2.0",
+    "webpack": "^4.0.1",
+    "webpack-cli": "^3.1.1",
+    "webpack-dev-server": "^3.1.8"
+  }
+}

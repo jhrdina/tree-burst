@@ -1,0 +1,30 @@
+{
+  "name": "tree-burst",
+  "reason": {
+    "react-jsx": 2
+  },
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    }
+  ],
+  "package-specs": [
+    {
+      "module": "es6",
+      "in-source": true
+    }
+  ],
+  "suffix": ".bs.js",
+  "namespace": true,
+  "bs-dependencies": [
+    "bs-black-tea",
+    "reason-react",
+    "bs-css",
+    "@jsiebern/bs-material-ui",
+    "pocket-mesh-peer",
+    "bs-automerge",
+    "pocket-mesh-peer-material-ui"
+  ],
+  "refmt": 3
+}
