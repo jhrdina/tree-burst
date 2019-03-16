@@ -49,7 +49,8 @@ let make = (~model: RootModel.model, ~pushMsg, _children) => {
                   {"TreeBurst" |> ReasonReact.string}
                 </Typography>
                 <div className=classes##toolbarRightBlock>
-                  <IconButton color=`Inherit>
+                  <IconButton
+                    color=`Inherit onClick={_ => pushMsg(Route.Change(P2P))}>
                     <PocketMeshPeerMaterialUi.GlobalIcon
                       signalState=Connected
                       peerState=Online

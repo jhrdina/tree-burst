@@ -51,13 +51,20 @@ let update = (model, msg) => {
       | _ => (model.p2p, Cmd.none)
       };
 
+    let route =
+      switch (p2pGuiMsg) {
+      | PMGui.Msg.ClickedGoBackToApp => Route.Editor
+      | _ => model.route
+      };
+
     (
-      {...model, p2p, p2pGui},
+      {...model, p2p, p2pGui, route},
       Cmd.batch([
         p2pGuiCmd |> Cmd.map(p2pGuiMsgToMsg),
         p2pCmd |> Cmd.map(p2pMsgToMsg),
       ]),
     );
+  | Route.Change(route) => ({...model, route}, Cmd.none)
   | _ => (model, Cmd.none)
   };
 };
