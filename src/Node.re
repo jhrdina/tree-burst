@@ -55,7 +55,7 @@ module Styles = {
         ),
       ]),
       borderRadius(`px(4)),
-      transition(~duration=500, "transform"),
+      transition(~duration=300, "transform"),
       focus([
         padding(`px(nodePadding - nodeSelectedBorderWidth)),
         outlineStyle(`none),
@@ -82,14 +82,15 @@ let make =
       ~onChange=(_, _) => (),
       ~onSizeChange=_ => (),
       ~onBlur=_ => (),
-      ~pushMsg,
+      ~onAddSibling=() => (),
+      ~onAddChild=() => (),
       _children,
     ) => {
   ...component,
 
   initialState: () => {rootRef: ref(None), doReportSize: ref(false)},
 
-  reducer: (_action, s) => ReasonReact.NoUpdate,
+  reducer: (_action, _s) => ReasonReact.NoUpdate,
 
   retainedProps: {
     text: text,
@@ -118,15 +119,28 @@ let make =
       )}
       content=text
       editable=true
+      multiLine=true
       onBlur
       onFocus={_ => Js.log2("focused", text)}
-      onKeyDown={(e, s) =>
+      onKeyPress={e =>
         switch (e |> ReactEvent.Keyboard.key) {
-        | "Enter" when !ReactEvent.Keyboard.shiftKey(e) =>
+        | "Enter"
+            when
+              !ReactEvent.Keyboard.shiftKey(e)
+              && !ReactEvent.Keyboard.ctrlKey(e) =>
           e |> ReactEvent.Keyboard.preventDefault;
           e |> ReactEvent.Keyboard.stopPropagation;
-        // pushMsg(PressedEnter);
-        | x => Js.log2("asdf", x)
+          onAddSibling();
+        | _ => ()
+        }
+      }
+      onKeyDown={e =>
+        switch (e |> ReactEvent.Keyboard.key) {
+        | "Enter" when e |> ReactEvent.Keyboard.ctrlKey =>
+          e |> ReactEvent.Keyboard.preventDefault;
+          e |> ReactEvent.Keyboard.stopPropagation;
+          onAddChild();
+        | _ => ()
         }
       }
       onChange

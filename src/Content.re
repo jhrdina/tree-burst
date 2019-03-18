@@ -169,3 +169,16 @@ let getRootNodeId = crdt =>
 
 let getRootNode = crdt =>
   crdt |> getRootNodeId |?> (rootNodeId => crdt |> findNodeById(rootNodeId));
+
+let rec foldNodes: (('a, node) => 'a, 'a, string, PM.Crdt.t) => 'a =
+  (f, acc, nodeId, crdt) => {
+    switch (crdt |> findNodeByIdSafe(nodeId)) {
+    | Some(node) =>
+      let acc = f(acc, node);
+      node.children
+      ->Belt.List.reduce(acc, (acc, childId) =>
+          foldNodes(f, acc, childId, crdt)
+        );
+    | None => acc
+    };
+  };

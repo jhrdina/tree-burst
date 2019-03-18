@@ -1,19 +1,25 @@
 open Infix;
 
+module NodeIdMap = Map.Make(String);
+let findOpt = (key, map) =>
+  switch (NodeIdMap.find(key, map)) {
+  | value => Some(value)
+  | exception Not_found => None
+  };
+
 type editedNode = {
   id: string,
   text: string,
 };
 
-type visibleNode = {
-  id: string,
-  pos: (int, int),
-  dimensions: option((int, int)),
+type state = {
+  editedNode: option(editedNode),
+  nodesDimensions: NodeIdMap.t((int, int)),
 };
 
-// We map content.nodes |> Map.t(visibleNode)
-
-type state = {editedNode: option(editedNode)};
+type action =
+  | UpdateNodeText(string)
+  | ChangedNodeSize(string, (int, int));
 
 /*
  new CRDT content -> update prop NodeView.value [RENDER 1] -> detect value change in NodeView, fire onDimensionsChange -> update model with new dimensions -> model change detected so run layout (compute new positions) -> update prop NodeView.pos [RENDER 2]
@@ -39,13 +45,6 @@ type line = {
   end_: (int, int),
 };
 
-module NodeIdMap = Map.Make(String);
-let findOpt = (key, map) =>
-  switch (NodeIdMap.find(key, map)) {
-  | value => Some(value)
-  | exception Not_found => None
-  };
-
 type subtreeLayout = {
   positions: NodeIdMap.t((int, int)),
   lines: list(line),
@@ -57,8 +56,8 @@ let nodesVSpace = 16;
 
 let rec layoutSubtree =
         (
-          (x, y) as topLeft,
-          nodes,
+          (x, y),
+          crdt,
           nodesDimensions: NodeIdMap.t((int, int)),
           subtreesLayout,
           node: Content.node,
@@ -68,7 +67,7 @@ let rec layoutSubtree =
   let subtreesVBoxPos = (x + thisNodeWidth + nodesHSpace, y);
   // Layout children
   node.children
-  ->Belt.List.keepMap(nodeId => nodes |> findOpt(nodeId))
+  ->Belt.List.keepMap(nodeId => crdt |> Content.findNodeByIdSafe(nodeId))
   ->Belt.List.reduce(
       (
         // Starting subtree pos
@@ -89,7 +88,7 @@ let rec layoutSubtree =
         let subtreeLayout =
           layoutSubtree(
             subtreePos,
-            nodes,
+            crdt,
             nodesDimensions,
             subtreesLayout,
             node,
@@ -147,41 +146,57 @@ let rec layoutSubtree =
     );
 };
 
-type action =
-  | UpdateNodeText(string);
-
 let useStyles =
-  MuiStylesHooks.makeWithTheme(theme =>
-    [
-      {
-        name: "root",
-        styles:
-          ReactDOMRe.Style.make(
-            ~position="relative",
-            ~backgroundColor="#eeeeee",
-            ~flexGrow="1",
-            ~display="flex",
-            ~overflow="auto",
-            (),
-          ),
-      },
-      {
-        name: "zoomWrapper",
-        styles:
-          ReactDOMRe.Style.make(
-            // ~border="2px solid #00ff00",
-            ~transformOrigin="top left",
-            ~flex="1",
-            (),
-          ),
-      },
-    ]
-  );
+  MuiStylesHooks.make([
+    {
+      name: "root",
+      styles:
+        ReactDOMRe.Style.make(
+          ~position="relative",
+          ~backgroundColor="#eeeeee",
+          ~flexGrow="1",
+          ~display="flex",
+          ~overflow="auto",
+          (),
+        ),
+    },
+    {
+      name: "zoomWrapper",
+      styles:
+        ReactDOMRe.Style.make(
+          // ~border="2px solid #00ff00",
+          ~transformOrigin="top left",
+          ~flex="1",
+          (),
+        ),
+    },
+  ]);
 
 let withIdentity = p2pState =>
   switch (p2pState |> PM.State.classify) {
   | HasIdentity(dbState, runtimeState) => Some((dbState, runtimeState))
   | _ => None
+  };
+
+let rootNodeOfModel = (groupId, model: RootModel.model) =>
+  switch (model.p2p |> PM.State.classify) {
+  | HasIdentity(dbState, _runtimeState) =>
+    dbState
+    |> PM.DbState.groups
+    |> PM.PeersGroups.findOpt(groupId)
+    |?>> PM.PeersGroup.content
+    |?> (
+      content =>
+        content
+        |> Content.getRootNodeId
+        |?> (
+          rootNodeId =>
+            content
+            |> Content.findNodeByIdSafe(rootNodeId)
+            |?>> (rootNode => (content, rootNodeId, rootNode))
+        )
+    )
+  | WaitingForDbAndIdentity(_) => None
   };
 
 let component = ReasonReact.reducerComponent("TreeView");
@@ -190,6 +205,7 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
   ...component,
 
   initialState: () => {
+    nodesDimensions: NodeIdMap.empty,
     editedNode:
       model.p2p
       |> withIdentity
@@ -213,12 +229,23 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
   },
 
   reducer: (action: action, s: state) =>
+    switch (action) {
+    | ChangedNodeSize(nodeId, size) =>
+      if (s.nodesDimensions |> findOpt(nodeId) |?>> (!=)(size) |? true) {
+        ReasonReact.Update({
+          ...s,
+          nodesDimensions: s.nodesDimensions |> NodeIdMap.add(nodeId, size),
+        });
+      } else {
+        ReasonReact.NoUpdate;
+      }
+    | UpdateNodeText(_) => ReasonReact.NoUpdate
     // ReasonReact.Update(
     //   switch (action) {
     //   // | UpdateNodeText(text) => {...s, editedNode: text}
     //   },
     // ),
-    ReasonReact.NoUpdate,
+    },
 
   render: self => {
     <UseHook
@@ -226,46 +253,78 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
       render={classes =>
         <div className=classes##root id="mScroller">
           <div className=classes##zoomWrapper id="mScaler">
-            {switch (model.p2p |> PM.State.classify) {
-             | HasIdentity(dbState, runtimeState) =>
-               dbState
-               |> PM.DbState.groups
-               |> PM.PeersGroups.findOpt(groupId)
-               |?>> PM.PeersGroup.content
-               |?> (
-                 content =>
-                   content
-                   |> Content.getRootNodeId
-                   |?> (
-                     rootNodeId =>
-                       content
-                       |> Content.findNodeByIdSafe(rootNodeId)
-                       |?>> (
-                         node =>
-                           {<Node
-                              pos=(100, 170)
-                              selected=true
-                              text={node.text}
-                              pushMsg
-                              onChange={(e, v) =>
-                                pushMsg(
-                                  RootModel.P2PMsg(
-                                    PM.Msg.updateGroupContent(
-                                      groupId,
-                                      content
-                                      |> Content.updateNodeText(rootNodeId, v),
-                                    ),
-                                  ),
-                                )
-                              }
-                              onSizeChange={s => Js.log(s)}
-                            />}
-                       )
-                   )
-               )
-               |? ReasonReact.null
-             | WaitingForDbAndIdentity(_) => ReasonReact.null
-             }}
+            {model
+             |> rootNodeOfModel(groupId)
+             |?>> (
+               ((content, rootNodeId, rootNode)) =>
+                 {let layout =
+                    layoutSubtree(
+                      (16, 16),
+                      content,
+                      self.state.nodesDimensions,
+                      {
+                        positions: NodeIdMap.empty,
+                        lines: [],
+                        rect: {
+                          x: 16,
+                          y: 16,
+                          width: 0,
+                          height: 0,
+                        },
+                      },
+                      rootNode,
+                    )
+                  content
+                  |> Content.foldNodes(
+                       (arr, node) => {
+                         let nodeEl =
+                           <Node
+                             key={node.id}
+                             pos={
+                               layout.positions |> findOpt(node.id) |? (0, 0)
+                             }
+                             selected=true
+                             text={node.text}
+                             onChange={(_e, v) =>
+                               pushMsg(
+                                 RootModel.P2PMsg(
+                                   PM.Msg.updateGroupContent(
+                                     groupId,
+                                     content
+                                     |> Content.updateNodeText(node.id, v),
+                                   ),
+                                 ),
+                               )
+                             }
+                             onAddSibling={() => Js.log("adding sibling")}
+                             onAddChild={() =>
+                               pushMsg(
+                                 RootModel.P2PMsg(
+                                   PM.Msg.updateGroupContent(
+                                     groupId,
+                                     content
+                                     |> Content.addChild(
+                                          ~parentId=node.id,
+                                          ~childId=
+                                            Js.Date.now() |> string_of_float,
+                                          ~text="",
+                                        ),
+                                   ),
+                                 ),
+                               )
+                             }
+                             onSizeChange={size =>
+                               self.send(ChangedNodeSize(node.id, size))
+                             }
+                           />;
+                         Array.append(arr, [|nodeEl|]);
+                       },
+                       [||],
+                       rootNodeId,
+                     )
+                  |> ReasonReact.array}
+             )
+             |? ReasonReact.null}
           </div>
         </div>
       }
