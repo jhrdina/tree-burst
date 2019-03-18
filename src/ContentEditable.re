@@ -1,37 +1,47 @@
-[@bs.module "react-simple-contenteditable"]
+[@bs.module "react-sane-contenteditable"]
 external reactClass: ReasonReact.reactClass = "default";
-Js.log(reactClass);
 
 let make =
     (
-      ~html: string,
-      ~className: option(string)=?,
-      ~onChange: option((ReactEvent.Form.t, string) => unit)=?,
+      ~content: option(string)=?,
+      ~editable: option(bool)=?,
+      ~focus: option(bool)=?,
+      ~maxLength: option(bool)=?,
+      ~multiLine: option(bool)=?,
+      ~sanitise: option(bool)=?,
+      ~caretPosition: option([ | `Start | `End])=?,
+      ~tagName: option(string)=?,
+      ~innerRef: option(Js.Nullable.t(ReasonReact.reactRef) => unit)=?,
       ~onBlur: option(ReactEvent.Form.t => unit)=?,
+      ~onKeyDown: option((ReactEvent.Keyboard.t, string) => unit)=?,
+      ~onPaste: option(ReactEvent.Clipboard.t => unit)=?,
+      ~onChange: option((ReactEvent.Form.t, string) => unit)=?,
       ~onFocus: option(ReactEvent.Form.t => unit)=?,
-      ~onKeyPress: option((ReactEvent.Keyboard.t, string) => unit)=?,
-      ~contentEditable: option([ | `PlainTextOnly | `False | `True])=?,
+      ~className: option(string)=?,
       ~style: option(ReactDOMRe.Style.t)=?,
+      ~styled: option(bool)=?,
       children,
     ) =>
   ReasonReact.wrapJsForReason(
     ~reactClass,
     ~props={
-      "html": html,
-      "className": className,
-      "onFocus": onFocus,
+      "content": content,
+      "editable": editable,
+      "focus": focus,
+      "maxLength": maxLength,
+      "multiLine": multiLine,
+      "sanitise": sanitise,
+      "caretPosition": caretPosition,
+      "tagName": tagName,
+      "innerRef": innerRef,
       "onBlur": onBlur,
-      "onChange": onChange->Belt.Option.getWithDefault((_, _) => ()),
-      "onKeyPress": onKeyPress->Belt.Option.getWithDefault((_, _) => ()),
-      "contentEditable":
-        Belt.Option.map(
-          contentEditable,
-          fun
-          | `PlainTextOnly => "plaintext-only"
-          | `True => "true"
-          | `False => "false",
-        ),
+      "onKeyDown": onKeyDown,
+      "onPaste": onPaste,
+      "onChange": onChange,
+      "onFocus": onFocus,
+      "className": className,
       "style": style,
+      "styled": styled,
     },
     children,
   );

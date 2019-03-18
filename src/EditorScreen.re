@@ -62,7 +62,16 @@ let make = (~model: RootModel.model, ~pushMsg, _children) => {
                 </div>
               </Toolbar>
             </AppBar>
-            <TreeView model pushMsg />
+            <TreeView
+              groupId={
+                switch (PM.PeersGroup.Id.ofString("aaa")) {
+                | Some(x) => x
+                | None => raise(Not_found)
+                }
+              }
+              model
+              pushMsg
+            />
           </div>
         }
       />

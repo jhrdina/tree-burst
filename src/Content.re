@@ -6,8 +6,15 @@ let nodesKey = "nodes";
 let rootNodeIdKey = "rootNodeId";
 
 module NodeKeys = {
+  let id = "id";
   let text = "text";
   let children = "children";
+};
+
+type node = {
+  id: string,
+  text: string,
+  children: list(string),
 };
 
 let nodes = (root: PM.Crdt.Json.Map.t) =>
@@ -33,6 +40,39 @@ let nodes = (root: PM.Crdt.Json.Map.t) =>
 let findNodeById = (nodeId, t) =>
   PM.Crdt.(t |> root |> nodes |?> Json.Map.get(nodeId) |?> Json.Map.ofJson);
 
+let findNodeByIdSafe = (nodeId, t) =>
+  PM.Crdt.Json.(
+    t
+    |> findNodeById(nodeId)
+    |?> (
+      node => {
+        switch (
+          node |> Map.get(NodeKeys.id) |?> asString,
+          node |> Map.get(NodeKeys.text) |?> asString,
+          node
+          |> Map.get(NodeKeys.children)
+          |?> List.ofJson
+          |?>> (
+            children =>
+              List.foldRight(
+                (childIdJson, acc) =>
+                  switch (childIdJson |> asString) {
+                  | Some(childId) => [childId, ...acc]
+                  | None => acc
+                  },
+                children,
+                [],
+              )
+          )
+          |? [],
+        ) {
+        | (Some(id), Some(text), children) => Some({id, text, children})
+        | _ => None
+        };
+      }
+    )
+  );
+
 let updateKey = (key, f, map) =>
   PM.Crdt.Json.(
     switch (map |> Map.get(key)) {
@@ -56,6 +96,7 @@ let initNodes = (text, nodeId, t) =>
               |> Map.add(
                    nodeId,
                    Map.create()
+                   |> Map.add(NodeKeys.id, string(nodeId))
                    |> Map.add(NodeKeys.text, string(text))
                    |> Map.toJson,
                  )
@@ -93,6 +134,7 @@ let addChild = (~parentId, ~childId, ~text, t) =>
               |?>> Map.add(
                      childId,
                      Map.create()
+                     |> Map.add(NodeKeys.id, string(childId))
                      |> Map.add(NodeKeys.text, string(text))
                      |> Map.toJson,
                    )
@@ -124,3 +166,6 @@ let getRootNodeId = crdt =>
   PocketMeshPeer.Crdt.(
     crdt |> root |> Json.Map.get(rootNodeIdKey) |?> Json.asString
   );
+
+let getRootNode = crdt =>
+  crdt |> getRootNodeId |?> (rootNodeId => crdt |> findNodeById(rootNodeId));

@@ -33,6 +33,7 @@ let init = () => {
 };
 
 let update = (model, msg) => {
+  // Js.log(msg);
   switch (msg) {
   | P2PMsg(p2pMsg) =>
     let (p2p, cmd) = PM.update(model.p2p, p2pMsg);
@@ -74,3 +75,6 @@ let subscriptions = model =>
 
 let store =
   Store.create(~init, ~update, ~subscriptions, ~shutdown=_ => Cmd.none);
+
+// store.subscribe(model => Js.log(model));
+/* */

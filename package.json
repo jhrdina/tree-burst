@@ -27,7 +27,7 @@
     "pocket-mesh-peer-material-ui": "file:../pocket-mesh/pocket-mesh-peer-material-ui-0.2.3.tgz",
     "react": "^16.8.4",
     "react-dom": "^16.8.4",
-    "react-simple-contenteditable": "0.0.5",
+    "react-sane-contenteditable": "^1.5.0",
     "reason-react": "~0.5.3"
   },
   "devDependencies": {
