@@ -7,8 +7,6 @@ type retainedProps = {text: string};
 
 type action;
 
-let pxOfInt = x => string_of_int(x) ++ "px";
-
 let getSizeOfRef: ReasonReact.reactRef => (int, int) =
   r => {
     let rect = ReasonReact.refToJsObj(r)##getBoundingClientRect();
@@ -114,7 +112,8 @@ let make =
     <ContentEditable
       className=Styles.root
       style={ReactDOMRe.Style.make(
-        ~transform="translate(" ++ pxOfInt(x) ++ ", " ++ pxOfInt(y) ++ ")",
+        ~transform=
+          "translate(" ++ Utils.pxOfInt(x) ++ ", " ++ Utils.pxOfInt(y) ++ ")",
         (),
       )}
       content=text

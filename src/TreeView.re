@@ -41,6 +41,7 @@ type rect = {
 };
 
 type line = {
+  key: string,
   start: (int, int),
   end_: (int, int),
 };
@@ -51,7 +52,7 @@ type subtreeLayout = {
   rect,
 };
 
-let nodesHSpace = 100;
+let nodesHSpace = 80;
 let nodesVSpace = 16;
 
 let rec layoutSubtree =
@@ -96,7 +97,10 @@ let rec layoutSubtree =
         // Next iteration
         (
           (x, y + subtreeLayout.rect.height + nodesVSpace),
-          [(x, y + subtreeLayout.rect.height / 2), ...endsOfLines],
+          [
+            (node.id, (x, y + subtreeLayout.rect.height / 2)),
+            ...endsOfLines,
+          ],
           {
             ...subtreeLayout,
             rect: {
@@ -124,10 +128,12 @@ let rec layoutSubtree =
             thisNodeWidth;
         let height = max(thisNodeHeight, subtreesHeight);
 
-        let linesStart = (thisNodeWidth, y + height / 2);
+        let linesStart = (x + thisNodeWidth, y + height / 2);
         let linesToBeAdded =
           endsOfLines
-          |> List.map(lineEnd => {start: linesStart, end_: lineEnd});
+          |> List.map(((key, lineEnd)) =>
+               {start: linesStart, end_: lineEnd, key}
+             );
         let lines = List.append(linesToBeAdded, subtreesLayout.lines);
 
         {
@@ -144,6 +150,68 @@ let rec layoutSubtree =
         };
       }
     );
+};
+
+let renderCurve =
+    (~classes, ~strength=?, ~key, ~start as (x1, y1), ~end_ as (x2, y2), ()) => {
+  let s = string_of_int;
+  let strength = strength |? (x2 - x1) / 2;
+  <path
+    key
+    d={
+      [
+        "M",
+        s(x1),
+        ",",
+        s(y1),
+        " ",
+        "C",
+        s(x1 + strength),
+        ",",
+        s(y1),
+        " ",
+        s(x2 - strength),
+        ",",
+        s(y2),
+        " ",
+        s(x2),
+        ",",
+        s(y2),
+      ]
+      |> String.concat("")
+    }
+    className=classes##edge
+  />;
+};
+
+let renderLines = (~classes, layout) => {
+  <svg
+    key="treeBurst-lines"
+    style={ReactDOMRe.Style.make(
+      ~position="absolute",
+      ~width=Utils.pxOfInt(layout.rect.width),
+      ~height=Utils.pxOfInt(layout.rect.height),
+      (),
+    )}>
+    {layout.lines
+     |> List.fold_left(
+          (arr, line) =>
+            Array.append(
+              arr,
+              [|
+                renderCurve(
+                  ~classes,
+                  ~start=line.start,
+                  ~end_=line.end_,
+                  ~key=line.key,
+                  (),
+                ),
+              |],
+            ),
+          [||],
+        )
+     |> ReasonReact.array}
+  </svg>;
 };
 
 let useStyles =
@@ -167,6 +235,17 @@ let useStyles =
           // ~border="2px solid #00ff00",
           ~transformOrigin="top left",
           ~flex="1",
+          ~padding="24px",
+          (),
+        ),
+    },
+    {
+      name: "edge",
+      styles:
+        ReactDOMRe.Style.make(
+          ~fill="none",
+          ~stroke="#8b8b8b",
+          ~strokeWidth="2px",
           (),
         ),
     },
@@ -259,21 +338,22 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                ((content, rootNodeId, rootNode)) =>
                  {let layout =
                     layoutSubtree(
-                      (16, 16),
+                      (0, 0),
                       content,
                       self.state.nodesDimensions,
                       {
                         positions: NodeIdMap.empty,
                         lines: [],
                         rect: {
-                          x: 16,
-                          y: 16,
+                          x: 0,
+                          y: 0,
                           width: 0,
                           height: 0,
                         },
                       },
                       rootNode,
                     )
+
                   content
                   |> Content.foldNodes(
                        (arr, node) => {
@@ -319,7 +399,7 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                            />;
                          Array.append(arr, [|nodeEl|]);
                        },
-                       [||],
+                       [|renderLines(~classes, layout)|],
                        rootNodeId,
                      )
                   |> ReasonReact.array}
