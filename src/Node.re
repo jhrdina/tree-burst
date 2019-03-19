@@ -117,9 +117,8 @@ let make =
           "translate(" ++ Utils.pxOfInt(x) ++ ", " ++ Utils.pxOfInt(y) ++ ")",
         (),
       )}
-      content=text
-      editable=true
-      multiLine=true
+      html=text
+      disabled=false
       onBlur
       onFocus
       onKeyPress={e =>
@@ -143,7 +142,7 @@ let make =
         | _ => ()
         }
       }
-      onChange
+      onChange={e => onChange(e, ReactEvent.Form.target(e)##value)}
       innerRef={r =>
         // self.state.rootRef := Js.Nullable.toOption(r);
 

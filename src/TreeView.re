@@ -389,6 +389,31 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                            | Some(_)
                            | None => node.text
                            };
+                         let handleBlur =
+                             (e, self: ReasonReact.self('a, 'b, 'c)) =>
+                           {let text =
+                              switch (self.state.editedNode) {
+                              | Some(editedNode) when editedNode.id == node.id =>
+                                editedNode.text
+                              | Some(_)
+                              | None => node.text
+                              }
+                            self.send(DeselectedNode(node.id))
+                            pushMsg(
+                              RootModel.P2PMsg(
+                                PM.Msg.updateGroupContent(
+                                  groupId,
+                                  content
+                                  |> Content.updateNodeText(node.id, text),
+                                ),
+                              ),
+                            )};
+                         let handleChange = (e, v) =>
+                           self.handle(
+                             ((e, v), self) =>
+                               self.send(ChangedNodeText(node.id, v)),
+                             (e, v),
+                           );
                          let nodeEl =
                            <Node
                              key={node.id}
@@ -397,9 +422,7 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                              }
                              selected=true
                              text
-                             onChange={(_e, v) =>
-                               self.send(ChangedNodeText(node.id, v))
-                             }
+                             onChange=handleChange
                              onAddSibling={() => Js.log("adding sibling")}
                              onAddChild={() =>
                                pushMsg(
@@ -418,18 +441,7 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                                )
                              }
                              onFocus={_ => self.send(SelectedNode(node.id))}
-                             onBlur={_ => {
-                               self.send(DeselectedNode(node.id));
-                               pushMsg(
-                                 RootModel.P2PMsg(
-                                   PM.Msg.updateGroupContent(
-                                     groupId,
-                                     content
-                                     |> Content.updateNodeText(node.id, text),
-                                   ),
-                                 ),
-                               );
-                             }}
+                             onBlur={self.handle(handleBlur)}
                              onSizeChange={size =>
                                self.send(ChangedNodeSize(node.id, size))
                              }
