@@ -80,6 +80,7 @@ let make =
       ~onChange=(_, _) => (),
       ~onSizeChange=_ => (),
       ~onBlur=_ => (),
+      ~onFocus=_ => (),
       ~onAddSibling=() => (),
       ~onAddChild=() => (),
       _children,
@@ -120,7 +121,7 @@ let make =
       editable=true
       multiLine=true
       onBlur
-      onFocus={_ => Js.log2("focused", text)}
+      onFocus
       onKeyPress={e =>
         switch (e |> ReactEvent.Keyboard.key) {
         | "Enter"
@@ -143,12 +144,17 @@ let make =
         }
       }
       onChange
-      innerRef={r => {
-        self.state.rootRef := Js.Nullable.toOption(r);
-        switch (self.state.rootRef^) {
-        | Some(x) => x |> getSizeOfRef |> onSizeChange
-        | None => ()
-        };
-      }}
+      innerRef={r =>
+        // self.state.rootRef := Js.Nullable.toOption(r);
+
+          switch (self.state.rootRef^, Js.Nullable.toOption(r)) {
+          | (_, None) => ()
+          | (Some(oldRef), Some(newRef)) when oldRef === newRef => ()
+          | (Some(_), Some(newRef))
+          | (None, Some(newRef)) =>
+            self.state.rootRef := Some(newRef);
+            newRef |> getSizeOfRef |> onSizeChange;
+          }
+        }
     />,
 };

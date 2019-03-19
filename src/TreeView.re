@@ -18,7 +18,9 @@ type state = {
 };
 
 type action =
-  | UpdateNodeText(string)
+  | SelectedNode(string)
+  | DeselectedNode(string)
+  | ChangedNodeText(string, string)
   | ChangedNodeSize(string, (int, int));
 
 /*
@@ -318,12 +320,35 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
       } else {
         ReasonReact.NoUpdate;
       }
-    | UpdateNodeText(_) => ReasonReact.NoUpdate
-    // ReasonReact.Update(
-    //   switch (action) {
-    //   // | UpdateNodeText(text) => {...s, editedNode: text}
-    //   },
-    // ),
+
+    | SelectedNode(nodeId) =>
+      let editedNode =
+        model.p2p
+        |> withIdentity
+        |?>> fst
+        |?>> PM.DbState.groups
+        |?> PM.PeersGroups.findOpt(groupId)
+        |?>> PM.PeersGroup.content
+        |?> Content.findNodeByIdSafe(nodeId)
+        |?>> (node => {id: nodeId, text: node.text});
+
+      ReasonReact.Update({...s, editedNode});
+
+    | DeselectedNode(nodeId) =>
+      switch (s.editedNode) {
+      | Some(editedNode) when editedNode.id == nodeId =>
+        ReasonReact.Update({...s, editedNode: None})
+      | Some(_)
+      | None => ReasonReact.NoUpdate
+      }
+
+    | ChangedNodeText(nodeId, text) =>
+      switch (s.editedNode) {
+      | Some(editedNode) when editedNode.id == nodeId =>
+        ReasonReact.Update({...s, editedNode: Some({...editedNode, text})})
+      | Some(_)
+      | None => ReasonReact.NoUpdate
+      }
     },
 
   render: self => {
@@ -357,6 +382,13 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                   content
                   |> Content.foldNodes(
                        (arr, node) => {
+                         let text =
+                           switch (self.state.editedNode) {
+                           | Some(editedNode) when editedNode.id == node.id =>
+                             editedNode.text
+                           | Some(_)
+                           | None => node.text
+                           };
                          let nodeEl =
                            <Node
                              key={node.id}
@@ -364,17 +396,9 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                                layout.positions |> findOpt(node.id) |? (0, 0)
                              }
                              selected=true
-                             text={node.text}
+                             text
                              onChange={(_e, v) =>
-                               pushMsg(
-                                 RootModel.P2PMsg(
-                                   PM.Msg.updateGroupContent(
-                                     groupId,
-                                     content
-                                     |> Content.updateNodeText(node.id, v),
-                                   ),
-                                 ),
-                               )
+                               self.send(ChangedNodeText(node.id, v))
                              }
                              onAddSibling={() => Js.log("adding sibling")}
                              onAddChild={() =>
@@ -393,6 +417,19 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                                  ),
                                )
                              }
+                             onFocus={_ => self.send(SelectedNode(node.id))}
+                             onBlur={_ => {
+                               self.send(DeselectedNode(node.id));
+                               pushMsg(
+                                 RootModel.P2PMsg(
+                                   PM.Msg.updateGroupContent(
+                                     groupId,
+                                     content
+                                     |> Content.updateNodeText(node.id, text),
+                                   ),
+                                 ),
+                               );
+                             }}
                              onSizeChange={size =>
                                self.send(ChangedNodeSize(node.id, size))
                              }
