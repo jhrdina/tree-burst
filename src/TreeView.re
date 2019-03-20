@@ -390,7 +390,7 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                            | None => node.text
                            };
                          let handleBlur =
-                             (e, self: ReasonReact.self('a, 'b, 'c)) =>
+                             (_e, self: ReasonReact.self('a, 'b, 'c)) =>
                            {let text =
                               switch (self.state.editedNode) {
                               | Some(editedNode) when editedNode.id == node.id =>
@@ -408,12 +408,7 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                                 ),
                               ),
                             )};
-                         let handleChange = (e, v) =>
-                           self.handle(
-                             ((e, v), self) =>
-                               self.send(ChangedNodeText(node.id, v)),
-                             (e, v),
-                           );
+
                          let nodeEl =
                            <Node
                              key={node.id}
@@ -422,7 +417,9 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                              }
                              selected=true
                              text
-                             onChange=handleChange
+                             onChange={(_e, v) =>
+                               self.send(ChangedNodeText(node.id, v))
+                             }
                              onAddSibling={() => Js.log("adding sibling")}
                              onAddChild={() =>
                                pushMsg(

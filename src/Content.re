@@ -182,3 +182,6 @@ let rec foldNodes: (('a, node) => 'a, 'a, string, PM.Crdt.t) => 'a =
     | None => acc
     };
   };
+
+let logNodes = (text, crdt) =>
+  Js.log2(text, crdt |> PM.Crdt.root |> nodes |> Js.Json.stringifyAny);

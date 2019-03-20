@@ -117,8 +117,7 @@ let make =
           "translate(" ++ Utils.pxOfInt(x) ++ ", " ++ Utils.pxOfInt(y) ++ ")",
         (),
       )}
-      html=text
-      disabled=false
+      text
       onBlur
       onFocus
       onKeyPress={e =>
@@ -142,18 +141,14 @@ let make =
         | _ => ()
         }
       }
-      onChange={e => onChange(e, ReactEvent.Form.target(e)##value)}
-      innerRef={r =>
-        // self.state.rootRef := Js.Nullable.toOption(r);
-
-          switch (self.state.rootRef^, Js.Nullable.toOption(r)) {
-          | (_, None) => ()
-          | (Some(oldRef), Some(newRef)) when oldRef === newRef => ()
-          | (Some(_), Some(newRef))
-          | (None, Some(newRef)) =>
-            self.state.rootRef := Some(newRef);
-            newRef |> getSizeOfRef |> onSizeChange;
-          }
-        }
+      onChange
+      innerRef={r => {
+        let maybeRef = Js.Nullable.toOption(r);
+        self.state.rootRef := maybeRef;
+        switch (maybeRef) {
+        | Some(newRef) => newRef |> getSizeOfRef |> onSizeChange
+        | None => ()
+        };
+      }}
     />,
 };

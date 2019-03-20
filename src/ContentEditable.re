@@ -1,14 +1,12 @@
-[@bs.module "react-contenteditable"]
+[@bs.module "./ContentEditable"]
 external reactClass: ReasonReact.reactClass = "default";
 
 let make =
     (
-      ~html: option(string)=?,
-      ~onChange: option(ReactEvent.Form.t => unit)=?,
+      ~text: option(string)=?,
+      ~onChange: option((ReactEvent.Form.t, string) => unit)=?,
       ~onBlur: option(ReactEvent.Form.t => unit)=?,
       ~onKeyDown: option(ReactEvent.Keyboard.t => unit)=?,
-      ~disabled: option(bool)=?,
-      ~tagName: option(string)=?,
       ~className: option(string)=?,
       ~style: option(ReactDOMRe.Style.t)=?,
       ~innerRef: option(Js.Nullable.t(ReasonReact.reactRef) => unit)=?,
@@ -20,12 +18,10 @@ let make =
   ReasonReact.wrapJsForReason(
     ~reactClass,
     ~props={
-      "html": html,
+      "text": text,
       "onChange": onChange,
       "onBlur": onBlur,
       "onKeyDown": onKeyDown,
-      "disabled": disabled,
-      "tagName": tagName,
       "className": className,
       "style": style,
       "innerRef": innerRef,
