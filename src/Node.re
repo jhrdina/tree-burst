@@ -1,18 +1,3 @@
-type state = {
-  rootRef: ref(option(ReasonReact.reactRef)),
-  doReportSize: ref(bool),
-};
-
-type retainedProps = {text: string};
-
-type action;
-
-let getSizeOfRef: ReasonReact.reactRef => (int, int) =
-  r => {
-    let rect = ReasonReact.refToJsObj(r)##getBoundingClientRect();
-    (rect##width, rect##height);
-  };
-
 module Styles = {
   open Css;
   let nodePadding = 8;
@@ -20,6 +5,7 @@ module Styles = {
 
   let root =
     style([
+      minHeight(`em(1.0)),
       position(`absolute),
       backgroundColor(`hex("ffffff")),
       color(`rgba((0, 0, 0, 0.87))),
@@ -62,15 +48,7 @@ module Styles = {
     ]);
 };
 
-let component:
-  ReasonReact.componentSpec(
-    'state,
-    ReasonReact.stateless,
-    retainedProps,
-    ReasonReact.noRetainedProps,
-    ReasonReact.actionless,
-  ) =
-  ReasonReact.reducerComponentWithRetainedProps("Node");
+let component = ReasonReact.statelessComponent("Node");
 
 let make =
     (
@@ -87,29 +65,7 @@ let make =
     ) => {
   ...component,
 
-  initialState: () => {rootRef: ref(None), doReportSize: ref(false)},
-
-  reducer: (_action, _s) => ReasonReact.NoUpdate,
-
-  retainedProps: {
-    text: text,
-  },
-
-  didUpdate: ({oldSelf, newSelf}) =>
-    switch (newSelf.state.rootRef^) {
-    | Some(rootRef)
-        when
-          /*newSelf.state.doReportSize^
-            &&*/ oldSelf.
-            retainedProps.
-            text
-          != newSelf.retainedProps.text =>
-      rootRef |> getSizeOfRef |> onSizeChange
-    | Some(_)
-    | None => ()
-    },
-
-  render: self =>
+  render: _self =>
     <ContentEditable
       className=Styles.root
       style={ReactDOMRe.Style.make(
@@ -142,13 +98,6 @@ let make =
         }
       }
       onChange
-      innerRef={r => {
-        let maybeRef = Js.Nullable.toOption(r);
-        self.state.rootRef := maybeRef;
-        switch (maybeRef) {
-        | Some(newRef) => newRef |> getSizeOfRef |> onSizeChange
-        | None => ()
-        };
-      }}
+      onSizeChange
     />,
 };

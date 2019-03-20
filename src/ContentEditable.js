@@ -6,23 +6,29 @@ export default class ContentEditable extends React.Component {
     this.handleRef = this.handleRef.bind(this);
   }
 
+  maybeNotifySizeChange() {
+    if (!this.el || !this.props.onSizeChange) return;
+
+    const rect = this.el.getBoundingClientRect();
+    this.props.onSizeChange([rect.width, rect.height]);
+  }
+
   maybeUpdateText() {
     if (!this.el) return;
 
     if (this.props.text !== this.el.innerText) {
       this.el.innerText = this.props.text;
+      this.maybeNotifySizeChange();
     }
+  }
+
+  componentDidMount() {
+    this.maybeNotifySizeChange();
   }
 
   componentDidUpdate() {
     this.maybeUpdateText();
   }
-
-  // shouldComponentUpdate(nextProps) {
-  //   return Object.keys(nextProps).reduce((a, key) => {
-  //     return key !== "text" ? a || this.props[key] !== nextProps[key] : a;
-  //   }, false)
-  // }
 
   handlePaste(onPaste) {
     return e => {
@@ -35,16 +41,26 @@ export default class ContentEditable extends React.Component {
 
   handleRef(r) {
     this.el = r;
-    this.maybeUpdateText();
     this.props.innerRef && this.props.innerRef(r);
+    this.maybeUpdateText();
   }
 
   render() {
-    let { text, onChange, onPaste, innerRef, ...props } = this.props;
+    let {
+      text,
+      onChange,
+      onPaste,
+      onSizeChange,
+      innerRef,
+      ...props
+    } = this.props;
     return React.createElement("div", {
       ...props,
       contentEditable: "true",
-      onInput: e => onChange && onChange(e, e.target.innerText),
+      onInput: e => {
+        onChange && onChange(e, e.target.innerText);
+        this.maybeNotifySizeChange();
+      },
       ref: this.handleRef,
       onPaste: this.handlePaste(onPaste)
     });

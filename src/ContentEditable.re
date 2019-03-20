@@ -13,6 +13,7 @@ let make =
       ~focus: option(bool)=?,
       ~onKeyPress: option(ReactEvent.Keyboard.t => unit)=?,
       ~onFocus: option(ReactEvent.Form.t => unit)=?,
+      ~onSizeChange: option(((int, int)) => unit)=?,
       children,
     ) =>
   ReasonReact.wrapJsForReason(
@@ -28,6 +29,7 @@ let make =
       "focus": focus,
       "onKeyPress": onKeyPress,
       "onFocus": onFocus,
+      "onSizeChange": onSizeChange,
     },
     children,
   );
