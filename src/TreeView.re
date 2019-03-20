@@ -391,14 +391,7 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                            };
                          let handleBlur =
                              (_e, self: ReasonReact.self('a, 'b, 'c)) =>
-                           {let text =
-                              switch (self.state.editedNode) {
-                              | Some(editedNode) when editedNode.id == node.id =>
-                                editedNode.text
-                              | Some(_)
-                              | None => node.text
-                              }
-                            self.send(DeselectedNode(node.id))
+                           {self.send(DeselectedNode(node.id))
                             pushMsg(
                               RootModel.P2PMsg(
                                 PM.Msg.updateGroupContent(
