@@ -59,3 +59,14 @@ module MoreVert =
     [@bs.module "@material-ui/icons/MoreVert"]
     external reactClass: ReasonReact.reactClass = "default";
   });
+
+module Conflict = {
+  let component = ReasonReact.statelessComponent("Conflict");
+  let make = (~className="", _children) => {
+    ...component,
+    render: _self =>
+      <MaterialUi.SvgIcon className>
+        <path d="M8 5v8h2v7l5-9h-3l3-6z" />
+      </MaterialUi.SvgIcon>,
+  };
+};

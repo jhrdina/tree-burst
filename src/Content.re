@@ -2,8 +2,10 @@ open Infix;
 
 type nodeId = string;
 
-let nodesKey = "nodes";
-let rootNodeIdKey = "rootNodeId";
+module RootKeys = {
+  let nodes = "nodes";
+  let rootNodeId = "rootNodeId";
+};
 
 module NodeKeys = {
   let id = "id";
@@ -18,7 +20,7 @@ type node = {
 };
 
 let nodes = (root: PM.Crdt.Json.Map.t) =>
-  PM.Crdt.Json.(root |> Map.get(nodesKey) |?> Map.ofJson);
+  PM.Crdt.Json.(root |> Map.get(RootKeys.nodes) |?> Map.ofJson);
 
 // let foldNodes = (f, acc, crdt) =>
 //   PM.Crdt.(
@@ -91,7 +93,7 @@ let initNodes = (text, nodeId, t) =>
        PM.Crdt.Json.(
          root
          |> Map.add(
-              nodesKey,
+              RootKeys.nodes,
               Map.create()
               |> Map.add(
                    nodeId,
@@ -102,7 +104,7 @@ let initNodes = (text, nodeId, t) =>
                  )
               |> Map.toJson,
             )
-         |> Map.add(rootNodeIdKey, string(nodeId))
+         |> Map.add(RootKeys.rootNodeId, string(nodeId))
        )
      );
 
@@ -111,7 +113,7 @@ let addChild = (~parentId, ~childId, ~text, t) =>
   |> PM.Crdt.change("Add child", root =>
        PM.Crdt.Json.(
          root
-         |> updateKey(nodesKey, nodes =>
+         |> updateKey(RootKeys.nodes, nodes =>
               nodes
               |> Map.ofJson
               |?>> updateKey(
@@ -148,7 +150,7 @@ let updateNodeText = (nodeId, text, t) =>
   |> PM.Crdt.change("Change text", root =>
        PM.Crdt.Json.(
          root
-         |> updateKey(nodesKey, nodes =>
+         |> updateKey(RootKeys.nodes, nodes =>
               nodes
               |> Map.ofJson
               |?>> updateKey(nodeId, node =>
@@ -164,7 +166,7 @@ let updateNodeText = (nodeId, text, t) =>
 
 let getRootNodeId = crdt =>
   PocketMeshPeer.Crdt.(
-    crdt |> root |> Json.Map.get(rootNodeIdKey) |?> Json.asString
+    crdt |> root |> Json.Map.get(RootKeys.rootNodeId) |?> Json.asString
   );
 
 let getRootNode = crdt =>

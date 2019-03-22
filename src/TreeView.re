@@ -55,7 +55,7 @@ type subtreeLayout = {
 };
 
 let nodesHSpace = 80;
-let nodesVSpace = 16;
+let nodesVSpace = 12;
 
 let rec layoutSubtree =
         (
@@ -410,6 +410,7 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                              }
                              selected=true
                              text
+                             hasConflict=false
                              onChange={(_e, v) =>
                                self.send(ChangedNodeText(node.id, v))
                              }
