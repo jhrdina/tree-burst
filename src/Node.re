@@ -103,6 +103,7 @@ let make =
       ~onFocus=_ => (),
       ~onAddSibling=() => (),
       ~onAddChild=() => (),
+      ~onDelete=() => (),
       _children,
     ) => {
   ...component,
@@ -149,6 +150,10 @@ let make =
               e |> preventDefault;
               e |> stopPropagation;
               onAddChild();
+            | "Delete"
+            | "Backspace" when text == "" =>
+              e |> preventDefault;
+              onDelete();
             | _ => ()
             }
           )

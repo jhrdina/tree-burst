@@ -431,6 +431,24 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                                  ),
                                )
                              }
+                             onDelete={() =>
+                               switch (node.parentId) {
+                               | Some(parentId) =>
+                                 pushMsg(
+                                   RootModel.P2PMsg(
+                                     PM.Msg.updateGroupContent(
+                                       groupId,
+                                       content
+                                       |> Content.deleteChild(
+                                            ~parentId,
+                                            ~childId=node.id,
+                                          ),
+                                     ),
+                                   ),
+                                 )
+                               | None => ()
+                               }
+                             }
                              onFocus={_ => self.send(SelectedNode(node.id))}
                              onBlur={self.handle(handleBlur)}
                              onSizeChange={size =>

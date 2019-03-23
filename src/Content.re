@@ -9,12 +9,14 @@ module RootKeys = {
 
 module NodeKeys = {
   let id = "id";
+  let parentId = "parentId";
   let text = "text";
   let children = "children";
 };
 
 type node = {
   id: string,
+  parentId: option(string),
   text: string,
   children: list(string),
 };
@@ -50,6 +52,7 @@ let findNodeByIdSafe = (nodeId, t) =>
       node => {
         switch (
           node |> Map.get(NodeKeys.id) |?> asString,
+          node |> Map.get(NodeKeys.parentId) |?> asString,
           node |> Map.get(NodeKeys.text) |?> asString,
           node
           |> Map.get(NodeKeys.children)
@@ -68,7 +71,8 @@ let findNodeByIdSafe = (nodeId, t) =>
           )
           |? [],
         ) {
-        | (Some(id), Some(text), children) => Some({id, text, children})
+        | (Some(id), parentId, Some(text), children) =>
+          Some({id, parentId, text, children})
         | _ => None
         };
       }
@@ -137,9 +141,68 @@ let addChild = (~parentId, ~childId, ~text, t) =>
                      childId,
                      Map.create()
                      |> Map.add(NodeKeys.id, string(childId))
+                     |> Map.add(NodeKeys.parentId, string(parentId))
                      |> Map.add(NodeKeys.text, string(text))
                      |> Map.toJson,
                    )
+              |?>> Map.toJson
+            )
+       )
+     );
+
+let rec removeSubtreeFromNodes = (~nodeId, nodes) => {
+  PM.Crdt.Json.(
+    nodes
+    |> Map.get(nodeId)
+    |?> Map.ofJson
+    // Remove all my descendants
+    |?> Map.get(NodeKeys.children)
+    |?> List.ofJson
+    |?>> List.foldLeft(
+           (nodesAcc, childIdJson) =>
+             switch (childIdJson |> asString) {
+             | Some(childId) =>
+               removeSubtreeFromNodes(~nodeId=childId, nodesAcc)
+             | None => nodesAcc
+             },
+           nodes,
+         )
+    |? nodes
+    // Remove myself
+    |> Map.remove(nodeId)
+    |> (
+      nodes => {
+        Js.log2("removed", nodeId);
+        Js.log(nodes);
+        nodes;
+      }
+    )
+  );
+};
+
+let deleteChild = (~parentId, ~childId, t) =>
+  t
+  |> PM.Crdt.change("Delete child", root =>
+       PM.Crdt.Json.(
+         root
+         |> updateKey(RootKeys.nodes, nodes =>
+              nodes
+              |> Map.ofJson
+              |?>> removeSubtreeFromNodes(~nodeId=childId)
+              // TODO: Remove reference to removed child
+              // |?>> updateKey(parentId, node =>
+              //        node
+              //        |> Map.ofJson
+              //        |?>> updateKey(
+              //          NodeKeys.children,
+              //          children =>
+              //            children
+              //           |> List.ofJson
+              //           |> List.
+              //          )
+              //        |?>> Map.add(NodeKeys.text, string(text))
+              //        |?>> Map.toJson
+              //      )
               |?>> Map.toJson
             )
        )
