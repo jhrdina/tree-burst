@@ -1,6 +1,7 @@
 type t =
   | P2P
-  | Editor;
+  | Editor
+  | Conflict;
 
 type Msg.t +=
   | Change(t);
