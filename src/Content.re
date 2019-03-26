@@ -189,20 +189,22 @@ let deleteChild = (~parentId, ~childId, t) =>
               nodes
               |> Map.ofJson
               |?>> removeSubtreeFromNodes(~nodeId=childId)
-              // TODO: Remove reference to removed child
-              // |?>> updateKey(parentId, node =>
-              //        node
-              //        |> Map.ofJson
-              //        |?>> updateKey(
-              //          NodeKeys.children,
-              //          children =>
-              //            children
-              //           |> List.ofJson
-              //           |> List.
-              //          )
-              //        |?>> Map.add(NodeKeys.text, string(text))
-              //        |?>> Map.toJson
-              //      )
+              |?>> updateKey(parentId, node =>
+                     node
+                     |> Map.ofJson
+                     |?>> updateKey(NodeKeys.children, children =>
+                            children
+                            |> List.ofJson
+                            |?>> List.filter(id =>
+                                   id
+                                   |> asString
+                                   |?>> (id => id != childId)
+                                   |? true
+                                 )
+                            |?>> List.toJson
+                          )
+                     |?>> Map.toJson
+                   )
               |?>> Map.toJson
             )
        )

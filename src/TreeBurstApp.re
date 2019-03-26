@@ -1,5 +1,3 @@
-open BlackTea;
-
 module PMGui = PocketMeshPeerMaterialUi;
 
 module ModelProvider = {
