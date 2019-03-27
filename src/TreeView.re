@@ -251,13 +251,8 @@ let useStyles =
           (),
         ),
     },
+    {name: "node", styles: ReactDOMRe.Style.make(~position="absolute", ())},
   ]);
-
-let withIdentity = p2pState =>
-  switch (p2pState |> PM.State.classify) {
-  | HasIdentity(dbState, runtimeState) => Some((dbState, runtimeState))
-  | _ => None
-  };
 
 let rootNodeOfModel = (groupId, model: RootModel.model) =>
   switch (model.p2p |> PM.State.classify) {
@@ -289,7 +284,7 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
     nodesDimensions: NodeIdMap.empty,
     editedNode:
       model.p2p
-      |> withIdentity
+      |> RootModel.p2pMatchWithIdentity
       |?>> fst
       |?>> PM.DbState.groups
       |?> PM.PeersGroups.findOpt(groupId)
@@ -324,7 +319,7 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
     | SelectedNode(nodeId) =>
       let editedNode =
         model.p2p
-        |> withIdentity
+        |> RootModel.p2pMatchWithIdentity
         |?>> fst
         |?>> PM.DbState.groups
         |?> PM.PeersGroups.findOpt(groupId)
@@ -405,12 +400,22 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                          let hasConflict =
                            !(node.text.conflicts |> PM.Peer.Id.Map.is_empty);
 
+                         let (posX, posY) =
+                           layout.positions |> findOpt(node.id) |? (0, 0);
+
                          let nodeEl =
                            <Node
+                             className=classes##node
+                             style={ReactDOMRe.Style.make(
+                               ~transform=
+                                 "translate("
+                                 ++ Utils.pxOfInt(posX)
+                                 ++ ", "
+                                 ++ Utils.pxOfInt(posY)
+                                 ++ ")",
+                               (),
+                             )}
                              key={node.id}
-                             pos={
-                               layout.positions |> findOpt(node.id) |? (0, 0)
-                             }
                              selected=true
                              text
                              hasConflict
@@ -451,6 +456,13 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                                  )
                                | None => ()
                                }
+                             }
+                             onConflictClick={_ =>
+                               pushMsg(
+                                 Route.Change(
+                                   Conflict(groupId, Text(node.id)),
+                                 ),
+                               )
                              }
                              onFocus={_ => self.send(SelectedNode(node.id))}
                              onBlur={self.handle(handleBlur)}

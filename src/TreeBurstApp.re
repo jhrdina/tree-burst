@@ -37,7 +37,8 @@ module App = {
             <div className=Styles.root>
               {switch (model.route) {
                | Editor => <EditorScreen model pushMsg />
-               | Conflict => <ConflictScreen model pushMsg />
+               | Conflict(groupId, variant) =>
+                 <ConflictScreen groupId variant model pushMsg />
                | P2P =>
                  <PMGui.PeerScreens
                    core={model.p2p |> PM.State.classify}

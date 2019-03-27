@@ -1,3 +1,5 @@
+open Infix;
+
 // VIEW
 
 let variantTitleBorder = "1px solid #cbcbcb";
@@ -45,12 +47,137 @@ let useStyles =
             (),
           ),
       },
+      {
+        name: "variantTitleNote",
+        styles:
+          ReactDOMRe.Style.make(~fontWeight="normal", ~fontSize="12px", ()),
+      },
+      {
+        name: "nodeWrapper",
+        styles: ReactDOMRe.Style.make(~padding="12px 24px", ()),
+      },
+      {
+        name: "node",
+        styles: ReactDOMRe.Style.make(~display="inline-flex", ()),
+      },
     ]
   );
 
-let component = ReasonReact.statelessComponent("ConflictScreen");
+let renderSubtrees = (~classes, ~model: RootModel.model, ~pushMsg, ~groupId) =>
+  MaterialUi.(
+    <>
+      <Typography
+        variant=`Subtitle2
+        color=`TextSecondary
+        className={classes##variantTitle}>
+        {"Current value" |> ReasonReact.string}
+      </Typography>
+      <TreeView
+        groupId={
+          switch (PM.PeersGroup.Id.ofString("aaa")) {
+          | Some(x) => x
+          | None => raise(Not_found)
+          }
+        }
+        model
+        pushMsg
+      />
+      <Typography
+        variant=`Subtitle2
+        color=`TextSecondary
+        className={classes##variantTitle}>
+        {"Value suggested by XY" |> ReasonReact.string}
+      </Typography>
+      <TreeView
+        groupId={
+          switch (PM.PeersGroup.Id.ofString("aaa")) {
+          | Some(x) => x
+          | None => raise(Not_found)
+          }
+        }
+        model
+        pushMsg
+      />
+    </>
+  );
 
-let make = (~model: RootModel.model, ~pushMsg, _children) => {
+let renderCurrentTitle = classes =>
+  <MaterialUi.Typography
+    variant=`Subtitle2
+    color=`TextSecondary
+    className={
+      classes##variantTitle;
+    }>
+    {"Current value" |> ReasonReact.string}
+    <span className={classes##variantTitleNote}>
+      {" (you can edit this variant)" |> ReasonReact.string}
+    </span>
+  </MaterialUi.Typography>;
+
+let renderTitleForVariant = (~key="", classes) =>
+  <MaterialUi.Typography
+    key
+    variant=`Subtitle2
+    color=`TextSecondary
+    className={
+      classes##variantTitle;
+    }>
+    // TODO: Show a real peer alias
+     {"Value suggested by XY" |> ReasonReact.string} </MaterialUi.Typography>;
+
+let renderNodesConflict =
+    (~classes, ~model: RootModel.model, ~groupId, ~nodeId) => {
+  model.p2p
+  |> RootModel.p2pMatchWithIdentity
+  |?>> fst
+  |?>> PM.DbState.groups
+  |?> PM.PeersGroups.findOpt(groupId)
+  |?>> PM.PeersGroup.content
+  |?> Content.findNodeByIdSafe(nodeId)
+  |?>> (
+    node => {
+      let currentText = node.text.value;
+      let alternatives =
+        PM.Peer.Id.Map.fold(
+          (peerId, text, arr) => {
+            let key = {
+              peerId |> PM.Peer.Id.toString;
+            };
+            let addedEl =
+              <div key>
+                {renderTitleForVariant(classes)}
+                <div className=classes##nodeWrapper>
+                  <Node className=classes##node text />
+                </div>
+              </div>;
+
+            arr |> Array.append([|addedEl|]);
+          },
+          node.text.conflicts,
+          [||],
+        )
+        |> ReasonReact.array;
+      <>
+        {renderCurrentTitle(classes)}
+        <div className=classes##nodeWrapper>
+          <Node className=classes##node text=currentText />
+        </div>
+        alternatives
+      </>;
+    }
+  )
+  |? ReasonReact.null;
+};
+
+let component = ReasonReact.statelessComponent("ConflictScreen");
+let make =
+    (
+      ~model: RootModel.model,
+      ~pushMsg,
+      ~groupId,
+      ~variant: Route.conflictVariant,
+      _children,
+    ) => {
   ...component,
   render: _self =>
     MaterialUi.(
@@ -72,38 +199,10 @@ let make = (~model: RootModel.model, ~pushMsg, _children) => {
                 </Typography>
               </Toolbar>
             </AppBar>
-            <Typography
-              variant=`Subtitle2
-              color=`TextSecondary
-              className={classes##variantTitle}>
-              {"Current value" |> ReasonReact.string}
-            </Typography>
-            <TreeView
-              groupId={
-                switch (PM.PeersGroup.Id.ofString("aaa")) {
-                | Some(x) => x
-                | None => raise(Not_found)
-                }
-              }
-              model
-              pushMsg
-            />
-            <Typography
-              variant=`Subtitle2
-              color=`TextSecondary
-              className={classes##variantTitle}>
-              {"Value suggested by XY" |> ReasonReact.string}
-            </Typography>
-            <TreeView
-              groupId={
-                switch (PM.PeersGroup.Id.ofString("aaa")) {
-                | Some(x) => x
-                | None => raise(Not_found)
-                }
-              }
-              model
-              pushMsg
-            />
+            {switch (variant) {
+             | Text(nodeId) =>
+               renderNodesConflict(~classes, ~model, ~groupId, ~nodeId)
+             }}
           </div>
         }
       />

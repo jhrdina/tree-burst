@@ -70,6 +70,12 @@ let update = (model, msg) => {
   };
 };
 
+let p2pMatchWithIdentity = p2pState =>
+  switch (p2pState |> PM.State.classify) {
+  | HasIdentity(dbState, runtimeState) => Some((dbState, runtimeState))
+  | _ => None
+  };
+
 let subscriptions = model =>
   Sub.batch([PM.subscriptions(model.p2p) |> Sub.map(p2pMsgToMsg)]);
 

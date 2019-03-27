@@ -18,7 +18,6 @@ module Styles = {
 
   let root =
     style([
-      position(`absolute),
       display(`flex),
       backgroundColor(`hex("ffffff")),
       color(`rgba((0, 0, 0, 0.87))),
@@ -93,10 +92,12 @@ let component:
 
 let make =
     (
-      ~pos as (x, y),
+      ~className="",
+      ~style=ReactDOMRe.Style.make(),
       ~text,
       ~selected=false,
       ~hasConflict=false,
+      ~onConflictClick=_ => (),
       ~onChange=(_, _) => (),
       ~onSizeChange=_ => (),
       ~onBlur=_ => (),
@@ -120,13 +121,7 @@ let make =
     },
 
   render: self =>
-    <div
-      className=Styles.root
-      style={ReactDOMRe.Style.make(
-        ~transform=
-          "translate(" ++ Utils.pxOfInt(x) ++ ", " ++ Utils.pxOfInt(y) ++ ")",
-        (),
-      )}>
+    <div className={[Styles.root, className] |> String.concat(" ")} style>
       <ContentEditable
         className=Styles.contentEditable
         text
@@ -166,6 +161,7 @@ let make =
       />
       {hasConflict ?
          <MaterialUi.Button
+           onClick=onConflictClick
            color=`Inherit
            className={
              [/*classes##conflictButton, */ Styles.conflictButton]
