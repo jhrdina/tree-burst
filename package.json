@@ -23,8 +23,8 @@
     "bs-automerge": "file:../bs-automerge-0.3.1.tgz",
     "bs-black-tea": "^0.2.0",
     "bs-css": "^8.0.2",
-    "pocket-mesh-peer": "file:../pocket-mesh/pocket-mesh-peer-0.4.0.tgz",
-    "pocket-mesh-peer-material-ui": "file:../pocket-mesh/pocket-mesh-peer-material-ui-0.4.0.tgz",
+    "pocket-mesh-peer": "file:../pocket-mesh/pocket-mesh-peer-0.4.1.tgz",
+    "pocket-mesh-peer-material-ui": "file:../pocket-mesh/pocket-mesh-peer-material-ui-0.4.1.tgz",
     "react": "^16.8.4",
     "react-dom": "^16.8.4",
     "reason-react": "~0.5.3"

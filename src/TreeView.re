@@ -330,7 +330,7 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
         |?> PM.PeersGroups.findOpt(groupId)
         |?>> PM.PeersGroup.content
         |?> Content.findNodeByIdSafe(nodeId)
-        |?>> (node => {id: nodeId, text: node.text});
+        |?>> (node => {id: nodeId, text: node.text.value});
 
       ReasonReact.Update({...s, editedNode});
 
@@ -387,7 +387,7 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                            | Some(editedNode) when editedNode.id == node.id =>
                              editedNode.text
                            | Some(_)
-                           | None => node.text
+                           | None => node.text.value
                            };
                          let handleBlur =
                              (_e, self: ReasonReact.self('a, 'b, 'c)) =>
@@ -402,6 +402,9 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                               ),
                             )};
 
+                         let hasConflict =
+                           !(node.text.conflicts |> PM.Peer.Id.Map.is_empty);
+
                          let nodeEl =
                            <Node
                              key={node.id}
@@ -410,7 +413,7 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                              }
                              selected=true
                              text
-                             hasConflict=false
+                             hasConflict
                              onChange={(_e, v) =>
                                self.send(ChangedNodeText(node.id, v))
                              }

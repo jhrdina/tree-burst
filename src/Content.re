@@ -14,10 +14,15 @@ module NodeKeys = {
   let children = "children";
 };
 
+type conflictable('a) = {
+  value: 'a,
+  conflicts: PM.Peer.Id.Map.t('a),
+};
+
 type node = {
   id: string,
   parentId: option(string),
-  text: string,
+  text: conflictable(string),
   children: list(string),
 };
 
@@ -41,6 +46,33 @@ let nodes = (root: PM.Crdt.Json.Map.t) =>
 //          )
 //   );
 
+let conflictableMap = (mapper, conflictable: PM.Crdt.Json.conflictable) =>
+  conflictable.value
+  |> mapper
+  |?>> (
+    newValue => {
+      {
+        value: newValue,
+        conflicts:
+          conflictable.conflicts
+          |?>> (
+            conflictValues =>
+              PM.Crdt.Json.ConflictValues.fold(
+                (peerId, json, conflicts) =>
+                  switch (json |> mapper) {
+                  | Some(newValue) =>
+                    conflicts |> PM.Peer.Id.Map.add(peerId, newValue)
+                  | None => conflicts
+                  },
+                conflictValues,
+                PM.Peer.Id.Map.empty,
+              )
+          )
+          |? PM.Peer.Id.Map.empty,
+      };
+    }
+  );
+
 let findNodeById = (nodeId, t) =>
   PM.Crdt.(t |> root |> nodes |?> Json.Map.get(nodeId) |?> Json.Map.ofJson);
 
@@ -53,7 +85,7 @@ let findNodeByIdSafe = (nodeId, t) =>
         switch (
           node |> Map.get(NodeKeys.id) |?> asString,
           node |> Map.get(NodeKeys.parentId) |?> asString,
-          node |> Map.get(NodeKeys.text) |?> asString,
+          node |> Map.getC(NodeKeys.text) |?> conflictableMap(asString),
           node
           |> Map.get(NodeKeys.children)
           |?> List.ofJson
