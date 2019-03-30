@@ -46,17 +46,19 @@ export default class ContentEditable extends React.Component {
   }
 
   render() {
-    let {
+    const {
       text,
       onChange,
       onPaste,
       onSizeChange,
       innerRef,
+      editable,
       ...props
     } = this.props;
+    const editableBool = editable !== undefined ? editable : true;
     return React.createElement("div", {
       ...props,
-      contentEditable: "true",
+      contentEditable: editableBool ? "true" : "false",
       onInput: e => {
         onChange && onChange(e, e.target.innerText);
         this.maybeNotifySizeChange();

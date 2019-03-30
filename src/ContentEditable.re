@@ -4,6 +4,7 @@ external reactClass: ReasonReact.reactClass = "default";
 let make =
     (
       ~text: option(string)=?,
+      ~editable: option(bool)=?,
       ~onChange: option((ReactEvent.Form.t, string) => unit)=?,
       ~onBlur: option(ReactEvent.Form.t => unit)=?,
       ~onKeyDown: option(ReactEvent.Keyboard.t => unit)=?,
@@ -20,6 +21,7 @@ let make =
     ~reactClass,
     ~props={
       "text": text,
+      "editable": editable,
       "onChange": onChange,
       "onBlur": onBlur,
       "onKeyDown": onKeyDown,

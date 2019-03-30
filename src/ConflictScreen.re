@@ -72,32 +72,14 @@ let renderSubtrees = (~classes, ~model: RootModel.model, ~pushMsg, ~groupId) =>
         className={classes##variantTitle}>
         {"Current value" |> ReasonReact.string}
       </Typography>
-      <TreeView
-        groupId={
-          switch (PM.PeersGroup.Id.ofString("aaa")) {
-          | Some(x) => x
-          | None => raise(Not_found)
-          }
-        }
-        model
-        pushMsg
-      />
+      <TreeView groupId model pushMsg />
       <Typography
         variant=`Subtitle2
         color=`TextSecondary
         className={classes##variantTitle}>
         {"Value suggested by XY" |> ReasonReact.string}
       </Typography>
-      <TreeView
-        groupId={
-          switch (PM.PeersGroup.Id.ofString("aaa")) {
-          | Some(x) => x
-          | None => raise(Not_found)
-          }
-        }
-        model
-        pushMsg
-      />
+      <TreeView groupId model pushMsg />
     </>
   );
 
@@ -114,7 +96,7 @@ let renderCurrentTitle = classes =>
     </span>
   </MaterialUi.Typography>;
 
-let renderTitleForVariant = (~key="", classes) =>
+let renderTitleForVariant = (~key="", ~classes, peerAlias) =>
   <MaterialUi.Typography
     key
     variant=`Subtitle2
@@ -122,48 +104,59 @@ let renderTitleForVariant = (~key="", classes) =>
     className={
       classes##variantTitle;
     }>
-    // TODO: Show a real peer alias
-     {"Value suggested by XY" |> ReasonReact.string} </MaterialUi.Typography>;
+    {ReasonReact.string("Value suggested by " ++ peerAlias)}
+  </MaterialUi.Typography>;
 
 let renderNodesConflict =
     (~classes, ~model: RootModel.model, ~groupId, ~nodeId) => {
   model.p2p
   |> RootModel.p2pMatchWithIdentity
-  |?>> fst
-  |?>> PM.DbState.groups
-  |?> PM.PeersGroups.findOpt(groupId)
-  |?>> PM.PeersGroup.content
-  |?> Content.findNodeByIdSafe(nodeId)
   |?>> (
-    node => {
-      let currentText = node.text.value;
-      let alternatives =
-        PM.Peer.Id.Map.fold(
-          (peerId, text, arr) => {
-            let key = {
-              peerId |> PM.Peer.Id.toString;
-            };
-            let addedEl =
-              <div key>
-                {renderTitleForVariant(classes)}
-                <div className=classes##nodeWrapper>
-                  <Node className=classes##node text />
-                </div>
-              </div>;
+    ((dbState, _runtimeState)) => {
+      dbState
+      |> PM.DbState.groups
+      |> PM.PeersGroups.findOpt(groupId)
+      |?>> PM.PeersGroup.content
+      |?> Content.findNodeByIdSafe(nodeId)
+      |?>> (
+        node => {
+          let currentText = node.text.value;
+          let alternatives =
+            PM.Peer.Id.Map.fold(
+              (peerId, text, arr) => {
+                let peerName =
+                  dbState
+                  |> PM.DbState.peers
+                  |> PM.Peers.findOpt(peerId)
+                  |?>> PocketMeshPeerMaterialUi.GuiUtils.getPeerVisibleName
+                  |? (peerId |> PM.Peer.Id.toString);
+                let key = {
+                  peerId |> PM.Peer.Id.toString;
+                };
+                let addedEl =
+                  <div key>
+                    {renderTitleForVariant(~classes, peerName)}
+                    <div className=classes##nodeWrapper>
+                      <Node editable=false className=classes##node text />
+                    </div>
+                  </div>;
 
-            arr |> Array.append([|addedEl|]);
-          },
-          node.text.conflicts,
-          [||],
-        )
-        |> ReasonReact.array;
-      <>
-        {renderCurrentTitle(classes)}
-        <div className=classes##nodeWrapper>
-          <Node className=classes##node text=currentText />
-        </div>
-        alternatives
-      </>;
+                arr |> Array.append([|addedEl|]);
+              },
+              node.text.conflicts,
+              [||],
+            )
+            |> ReasonReact.array;
+          <>
+            {renderCurrentTitle(classes)}
+            <div className=classes##nodeWrapper>
+              <Node className=classes##node text=currentText />
+            </div>
+            alternatives
+          </>;
+        }
+      )
+      |? ReasonReact.null;
     }
   )
   |? ReasonReact.null;

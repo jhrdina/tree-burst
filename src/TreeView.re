@@ -416,7 +416,6 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                                (),
                              )}
                              key={node.id}
-                             selected=true
                              text
                              hasConflict
                              onChange={(_e, v) =>
@@ -477,7 +476,14 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                      )
                   |> ReasonReact.array}
              )
-             |? ReasonReact.null}
+             |? <MaterialUi.Typography variant=`Body2>
+                  {"Waiting for initial replica from local storage or from peers..."
+                   |> ReasonReact.string}
+                  <br/>
+                  <small>
+                  {"(make sure there is at least one peer with write permissions added in the group, so that we can get the data from it as soon as he goes online)" |> ReasonReact.string}
+                  </small>
+                </MaterialUi.Typography>}
           </div>
         </div>
       }

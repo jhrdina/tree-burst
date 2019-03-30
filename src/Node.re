@@ -95,7 +95,7 @@ let make =
       ~className="",
       ~style=ReactDOMRe.Style.make(),
       ~text,
-      ~selected=false,
+      ~editable=true,
       ~hasConflict=false,
       ~onConflictClick=_ => (),
       ~onChange=(_, _) => (),
@@ -125,6 +125,7 @@ let make =
       <ContentEditable
         className=Styles.contentEditable
         text
+        editable
         onBlur
         onFocus
         onKeyPress={e =>
