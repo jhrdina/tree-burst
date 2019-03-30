@@ -1,3 +1,11 @@
+open Infix;
+
+module PMGui = PocketMeshPeerMaterialUi;
+
+// CONSTANTS
+
+let appName = "TreeBurst";
+
 // VIEW
 
 let useStyles =
@@ -27,6 +35,16 @@ let useStyles =
         styles:
           ReactDOMRe.Style.make(~marginLeft="10px", ~marginRight="-16px", ()),
       },
+      {
+        name: "loadingMessage",
+        styles:
+          ReactDOMRe.Style.make(
+            ~padding="24px",
+            ~flexGrow="1",
+            ~backgroundColor="#eeeeee",
+            (),
+          ),
+      },
     ]
   );
 
@@ -34,7 +52,19 @@ let component = ReasonReact.statelessComponent("MainScreen");
 
 let make = (~model: RootModel.model, ~pushMsg, _children) => {
   ...component,
-  render: _self =>
+  render: _self => {
+    let p2pTagged = model.p2p |> PM.State.classify;
+    let title =
+      switch (p2pTagged, model.openedGroup) {
+      | (HasIdentity(dbState, _runtimeState), Some(groupId)) =>
+        dbState
+        |> PM.DbState.groups
+        |> PM.PeersGroups.findOpt(groupId)
+        |?>> PMGui.GuiUtils.getPeerGroupVisibleName
+        |? (groupId |> PM.PeersGroup.Id.toString)
+      | (HasIdentity(_, _), None)
+      | (WaitingForDbAndIdentity(_), _) => appName
+      };
     MaterialUi.(
       <UseHook
         hook=useStyles
@@ -44,7 +74,7 @@ let make = (~model: RootModel.model, ~pushMsg, _children) => {
               <Toolbar variant=`Dense>
                 <Typography
                   variant=`H6 color=`Inherit className={classes##toolbarTitle}>
-                  {"TreeBurst" |> ReasonReact.string}
+                  {title |> ReasonReact.string}
                 </Typography>
                 <div className=classes##toolbarRightBlock>
                   <IconButton
@@ -60,18 +90,22 @@ let make = (~model: RootModel.model, ~pushMsg, _children) => {
                 </div>
               </Toolbar>
             </AppBar>
-            <TreeView
-              groupId={
-                switch (PM.PeersGroup.Id.ofString("aaa")) {
-                | Some(x) => x
-                | None => raise(Not_found)
-                }
-              }
-              model
-              pushMsg
-            />
+            {switch (p2pTagged, model.openedGroup) {
+             | (HasIdentity(dbState, _), Some(groupId)) =>
+               //  TODO: pass only dbState instead of model
+               <TreeView groupId model pushMsg />
+             | (HasIdentity(dbState, _), None) =>
+               <Typography variant=`Body2 className=classes##loadingMessage>
+                 {"There is no group opened." |> ReasonReact.string}
+               </Typography>
+             | (WaitingForDbAndIdentity(_), _) =>
+               <Typography variant=`Body2 className=classes##loadingMessage>
+                 {"Loading..." |> ReasonReact.string}
+               </Typography>
+             }}
           </div>
         }
       />
-    ),
+    );
+  },
 };

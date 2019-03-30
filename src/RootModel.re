@@ -5,6 +5,7 @@ type model = {
   p2p: PM.State.t,
   p2pGui: PMGui.PeerScreens.model,
   route: Route.t,
+  openedGroup: option(PM.PeersGroup.Id.t),
 };
 
 type Msg.t +=
@@ -13,6 +14,45 @@ type Msg.t +=
 
 let p2pMsgToMsg = m => P2PMsg(m);
 let p2pGuiMsgToMsg = m => P2PGuiMsg(m);
+
+// HELPERS
+
+let groupExists = (groupId, dbState) =>
+  dbState
+  |> PM.DbState.groups
+  |> PM.PeersGroups.findOpt(groupId)
+  |> Belt.Option.isSome;
+
+let findSomeGroup = dbState =>
+  dbState
+  |> PM.DbState.groups
+  |> PM.PeersGroups.fold(
+       (selectedGroup, group) =>
+         switch (selectedGroup) {
+         | None => Some(group |> PM.PeersGroup.id)
+         | Some(_) => selectedGroup
+         },
+       None,
+     );
+
+// UPDATES
+
+let updateOpenedGroup = (~p2pTagged: PM.State.taggedT, openedGroup, msg) => {
+  let newOpenedGroup =
+    switch (msg) {
+    | P2PGuiMsg(PMGui.Msg.ClickedOpenGroup(groupId)) => Some(groupId)
+    | _ => openedGroup
+    };
+
+  switch (p2pTagged, newOpenedGroup, openedGroup) {
+  | (HasIdentity(dbState, _), Some(groupId), _)
+      when dbState |> groupExists(groupId) => newOpenedGroup
+  | (HasIdentity(dbState, _), _, Some(groupId))
+      when dbState |> groupExists(groupId) => openedGroup
+  | (HasIdentity(dbState, _), _, _) => dbState |> findSomeGroup
+  | (WaitingForDbAndIdentity(_), _, _) => None
+  };
+};
 
 let init = () => {
   let (p2p, p2pCmd) =
@@ -23,8 +63,10 @@ let init = () => {
       ),
     );
   let (p2pGui, p2pGuiCmd) = PMGui.PeerScreens.init();
+  let openedGroup =
+    updateOpenedGroup(~p2pTagged=p2p |> PM.State.classify, None, Msg.Noop);
   (
-    {p2p, p2pGui, route: Editor},
+    {p2p, p2pGui, route: Editor, openedGroup},
     Cmd.batch([
       p2pCmd |> Cmd.map(p2pMsgToMsg),
       p2pGuiCmd |> Cmd.map(p2pGuiMsgToMsg),
@@ -34,40 +76,55 @@ let init = () => {
 
 let update = (model, msg) => {
   // Js.log(msg);
-  switch (msg) {
-  | P2PMsg(p2pMsg) =>
-    let (p2p, cmd) = PM.update(model.p2p, p2pMsg);
-    ({...model, p2p}, cmd |> Cmd.map(p2pMsgToMsg));
-  | P2PGuiMsg(p2pGuiMsg) =>
-    // Handle cases when PMGui wants to send a msg to PM
-    let (p2p, p2pCmd) =
-      switch (p2pGuiMsg) {
-      | PMGui.Msg.ReqP2PMsg(p2pMsg) => PM.update(model.p2p, p2pMsg)
-      | _ => (model.p2p, Cmd.none)
-      };
-    let (p2pGui, p2pGuiCmd) =
-      PMGui.PeerScreens.update(
-        ~core=p2p |> PM.State.classify,
-        p2pGuiMsg,
-        model.p2pGui,
+  let (model, cmd) =
+    switch (msg) {
+    | P2PMsg(p2pMsg) =>
+      let (p2p, cmd) = PM.update(model.p2p, p2pMsg);
+      ({...model, p2p}, cmd |> Cmd.map(p2pMsgToMsg));
+    | P2PGuiMsg(p2pGuiMsg) =>
+      // Handle cases when PMGui wants to send a msg to PM
+      let (p2p, p2pCmd) =
+        switch (p2pGuiMsg) {
+        | PMGui.Msg.ReqP2PMsg(p2pMsg) => PM.update(model.p2p, p2pMsg)
+        | _ => (model.p2p, Cmd.none)
+        };
+      let (p2pGui, p2pGuiCmd) =
+        PMGui.PeerScreens.update(
+          ~core=p2p |> PM.State.classify,
+          p2pGuiMsg,
+          model.p2pGui,
+        );
+
+      let route =
+        switch (p2pGuiMsg) {
+        | PMGui.Msg.ClickedGoBackToApp
+        | PMGui.Msg.ClickedOpenGroup(_) => Route.Editor
+        | _ => model.route
+        };
+
+      (
+        {...model, p2p, p2pGui, route},
+        Cmd.batch([
+          p2pCmd |> Cmd.map(p2pMsgToMsg),
+          p2pGuiCmd |> Cmd.map(p2pGuiMsgToMsg),
+        ]),
       );
+    | Route.Change(route) => ({...model, route}, Cmd.none)
+    | _ => (model, Cmd.none)
+    };
 
-    let route =
-      switch (p2pGuiMsg) {
-      | PMGui.Msg.ClickedGoBackToApp => Route.Editor
-      | _ => model.route
-      };
-
-    (
-      {...model, p2p, p2pGui, route},
-      Cmd.batch([
-        p2pCmd |> Cmd.map(p2pMsgToMsg),
-        p2pGuiCmd |> Cmd.map(p2pGuiMsgToMsg),
-      ]),
-    );
-  | Route.Change(route) => ({...model, route}, Cmd.none)
-  | _ => (model, Cmd.none)
-  };
+  (
+    {
+      ...model,
+      openedGroup:
+        updateOpenedGroup(
+          ~p2pTagged=model.p2p |> PM.State.classify,
+          model.openedGroup,
+          msg,
+        ),
+    },
+    cmd,
+  );
 };
 
 let p2pMatchWithIdentity = p2pState =>
