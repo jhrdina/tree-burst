@@ -160,16 +160,16 @@ let make =
           maybeNotifySizeChange(self, hasConflict, onSizeChange);
         }}
       />
-      {hasConflict ?
-         <MaterialUi.Button
-           onClick=onConflictClick
-           color=`Inherit
-           className={
-             [/*classes##conflictButton, */ Styles.conflictButton]
-             |> String.concat(" ")
-           }>
-           <Icons.Conflict />
-         </MaterialUi.Button> :
-         ReasonReact.null}
+      {hasConflict
+         ? <MaterialUi.Button
+             onClick=onConflictClick
+             color=`Inherit
+             className={
+               [/*classes##conflictButton, */ Styles.conflictButton]
+               |> String.concat(" ")
+             }>
+             <Icons.Conflict />
+           </MaterialUi.Button>
+         : ReasonReact.null}
     </div>,
 };

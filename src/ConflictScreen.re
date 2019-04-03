@@ -1,5 +1,12 @@
 open Infix;
 
+// TYPES
+
+type state = {nodeText: string};
+type action =
+  | UpdateNodeText(string);
+type retainedProps = {nodeTextInDb: option(string)};
+
 // VIEW
 
 let variantTitleBorder = "1px solid #cbcbcb";
@@ -108,7 +115,13 @@ let renderTitleForVariant = (~key="", ~classes, peerAlias) =>
   </MaterialUi.Typography>;
 
 let renderNodesConflict =
-    (~classes, ~model: RootModel.model, ~groupId, ~nodeId) => {
+    (
+      ~classes,
+      ~self: ReasonReact.self('a, 'b, 'c),
+      ~model: RootModel.model,
+      ~groupId,
+      ~nodeId,
+    ) => {
   model.p2p
   |> RootModel.p2pMatchWithIdentity
   |?>> (
@@ -120,7 +133,6 @@ let renderNodesConflict =
       |?> Content.findNodeByIdSafe(nodeId)
       |?>> (
         node => {
-          let currentText = node.text.value;
           let alternatives =
             PM.Peer.Id.Map.fold(
               (peerId, text, arr) => {
@@ -150,7 +162,11 @@ let renderNodesConflict =
           <>
             {renderCurrentTitle(classes)}
             <div className=classes##nodeWrapper>
-              <Node className=classes##node text=currentText />
+              <Node
+                className=classes##node
+                text={self.state.nodeText}
+                onChange={(_, text) => self.send(UpdateNodeText(text))}
+              />
             </div>
             alternatives
           </>;
@@ -162,7 +178,22 @@ let renderNodesConflict =
   |? ReasonReact.null;
 };
 
-let component = ReasonReact.statelessComponent("ConflictScreen");
+let matchTextModeAndItsText =
+    (model: RootModel.model, groupId, variant: Route.conflictVariant) =>
+  switch (variant) {
+  | Text(nodeId) =>
+    model.p2p
+    |> RootModel.p2pMatchWithIdentity
+    |?>> fst
+    |?>> PM.DbState.groups
+    |?> PM.PeersGroups.findOpt(groupId)
+    |?>> PM.PeersGroup.content
+    |?> Content.findNodeByIdSafe(nodeId)
+    |?>> (node => node.text.value)
+  };
+
+let component =
+  ReasonReact.reducerComponentWithRetainedProps("ConflictScreen");
 let make =
     (
       ~model: RootModel.model,
@@ -172,7 +203,36 @@ let make =
       _children,
     ) => {
   ...component,
-  render: _self =>
+  retainedProps: {
+    nodeTextInDb: matchTextModeAndItsText(model, groupId, variant),
+  },
+  initialState: () => {
+    nodeText: matchTextModeAndItsText(model, groupId, variant) |? "",
+  },
+  reducer: (action, state) =>
+    switch (action) {
+    | UpdateNodeText(text) => ReasonReact.Update({nodeText: text})
+    },
+  didUpdate: ({oldSelf, newSelf}) =>
+    if (oldSelf.retainedProps.nodeTextInDb
+        != newSelf.retainedProps.nodeTextInDb) {
+      switch (newSelf.state.nodeText, newSelf.retainedProps.nodeTextInDb) {
+      | (curStateText, Some(dbText)) when curStateText != dbText =>
+        newSelf.send(UpdateNodeText(dbText))
+      | (curStateText, Some(_)) => ()
+      | (curStateText, None) => newSelf.send(UpdateNodeText(""))
+      };
+    },
+
+  render: self => {
+    let mContent =
+      model.p2p
+      |> RootModel.p2pMatchWithIdentity
+      |?>> fst
+      |?>> PM.DbState.groups
+      |?> PM.PeersGroups.findOpt(groupId)
+      |?>> PM.PeersGroup.content;
+
     MaterialUi.(
       <UseHook
         hook=useStyles
@@ -183,7 +243,31 @@ let make =
                 <IconButton
                   className=classes##toolbarLeftBtn
                   color=`Inherit
-                  onClick={_ => pushMsg(Route.Change(Editor))}>
+                  onClick={_ => {
+                    switch (
+                      variant,
+                      mContent,
+                      self.retainedProps.nodeTextInDb,
+                    ) {
+                    | (Text(nodeId), Some(content), Some(dbTxt))
+                        when self.state.nodeText != dbTxt =>
+                      pushMsg(
+                        RootModel.P2PMsg(
+                          PM.Msg.updateGroupContent(
+                            groupId,
+                            content
+                            |> Content.updateNodeText(
+                                 nodeId,
+                                 self.state.nodeText,
+                               ),
+                          ),
+                        ),
+                      )
+                    | (_, _, _) => ()
+                    };
+
+                    pushMsg(Route.Change(Editor));
+                  }}>
                   <Icons.ArrowBack />
                 </IconButton>
                 <Typography
@@ -194,10 +278,11 @@ let make =
             </AppBar>
             {switch (variant) {
              | Text(nodeId) =>
-               renderNodesConflict(~classes, ~model, ~groupId, ~nodeId)
+               renderNodesConflict(~classes, ~self, ~model, ~groupId, ~nodeId)
              }}
           </div>
         }
       />
-    ),
+    );
+  },
 };
