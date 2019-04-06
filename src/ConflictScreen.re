@@ -137,11 +137,10 @@ let renderNodesConflict =
             PM.Peer.Id.Map.fold(
               (peerId, text, arr) => {
                 let peerName =
-                  dbState
-                  |> PM.DbState.peers
-                  |> PM.Peers.findOpt(peerId)
-                  |?>> PocketMeshPeerMaterialUi.GuiUtils.getPeerVisibleName
-                  |? (peerId |> PM.Peer.Id.toString);
+                  peerId
+                  |> PocketMeshPeerMaterialUi.GuiUtils.getPeerVisibleName(
+                       ~dbState,
+                     );
                 let key = {
                   peerId |> PM.Peer.Id.toString;
                 };
