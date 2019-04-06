@@ -25,31 +25,23 @@ module Styles = {
 module App = {
   let component = ReasonReact.statelessComponent("App");
 
-  let useStyles = MuiStylesHooks.makeWithTheme(_theme => []);
-
   let make = (~model: RootModel.model, ~pushMsg, _children) => {
     ...component,
     render: _self =>
       <ThemeProvider>
-        <UseHook
-          hook=useStyles
-          render={classes =>
-            <div className=Styles.root>
-              {switch (model.route) {
-               | Editor => <EditorScreen model pushMsg />
-               | Conflict(groupId, variant) =>
-                 <ConflictScreen groupId variant model pushMsg />
-               | P2P =>
-                 <PMGui.PeerScreens
-                   core={model.p2p |> PM.State.classify}
-                   className=classes##root
-                   model={model.p2pGui}
-                   pushMsg={msg => msg |> RootModel.p2pGuiMsgToMsg |> pushMsg}
-                 />
-               }}
-            </div>
-          }
-        />
+        <div className=Styles.root>
+          {switch (model.route) {
+           | Editor => <EditorScreen model pushMsg />
+           | Conflict(groupId, variant) =>
+             <ConflictScreen groupId variant model pushMsg />
+           | P2P =>
+             <PMGui.PeerScreens
+               core={model.p2p |> PM.State.classify}
+               model={model.p2pGui}
+               pushMsg={msg => msg |> RootModel.p2pGuiMsgToMsg |> pushMsg}
+             />
+           }}
+        </div>
       </ThemeProvider>,
   };
 };

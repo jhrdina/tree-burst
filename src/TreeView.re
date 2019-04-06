@@ -120,14 +120,14 @@ let rec layoutSubtree =
   ->(
       ((_, endsOfLines, subtreesLayout)) => {
         let subtreesHeight =
-          subtreesLayout.rect.height > 0 ?
-            subtreesLayout.rect.height - nodesVSpace :
-            subtreesLayout.rect.height;
+          subtreesLayout.rect.height > 0
+            ? subtreesLayout.rect.height - nodesVSpace
+            : subtreesLayout.rect.height;
 
         let width =
-          subtreesLayout.rect.width > 0 ?
-            thisNodeWidth + nodesHSpace + subtreesLayout.rect.width :
-            thisNodeWidth;
+          subtreesLayout.rect.width > 0
+            ? thisNodeWidth + nodesHSpace + subtreesLayout.rect.width
+            : thisNodeWidth;
         let height = max(thisNodeHeight, subtreesHeight);
 
         let linesStart = (x + thisNodeWidth, y + height / 2);
@@ -430,8 +430,7 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                                      content
                                      |> Content.addChild(
                                           ~parentId=node.id,
-                                          ~childId=
-                                            Js.Date.now() |> string_of_float,
+                                          ~childId=PM.IdGenerator.generate(),
                                           ~text="",
                                         ),
                                    ),
@@ -479,9 +478,10 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
              |? <MaterialUi.Typography variant=`Body2>
                   {"Waiting for initial replica from local storage or from peers..."
                    |> ReasonReact.string}
-                  <br/>
+                  <br />
                   <small>
-                  {"(make sure there is at least one peer with write permissions added in the group, so that we can get the data from it as soon as he goes online)" |> ReasonReact.string}
+                    {"(make sure there is at least one peer with write permissions added in the group, so that we can get the data from it as soon as he goes online)"
+                     |> ReasonReact.string}
                   </small>
                 </MaterialUi.Typography>}
           </div>
