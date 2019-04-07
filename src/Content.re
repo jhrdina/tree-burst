@@ -202,13 +202,6 @@ let rec removeSubtreeFromNodes = (~nodeId, nodes) => {
     |? nodes
     // Remove myself
     |> Map.remove(nodeId)
-    |> (
-      nodes => {
-        Js.log2("removed", nodeId);
-        Js.log(nodes);
-        nodes;
-      }
-    )
   );
 };
 
