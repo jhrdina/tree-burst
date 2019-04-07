@@ -280,29 +280,7 @@ let component = ReasonReact.reducerComponent("TreeView");
 let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
   ...component,
 
-  initialState: () => {
-    nodesDimensions: NodeIdMap.empty,
-    editedNode:
-      model.p2p
-      |> RootModel.p2pMatchWithIdentity
-      |?>> fst
-      |?>> PM.DbState.groups
-      |?> PM.PeersGroups.findOpt(groupId)
-      |?>> PM.PeersGroup.content
-      |?> Content.getRootNode
-      |?> (
-        node =>
-          PM.Crdt.Json.(
-            switch (
-              node |> Map.get(Content.NodeKeys.id) |?> asString,
-              node |> Map.get(Content.NodeKeys.text) |?> asString,
-            ) {
-            | (Some(id), Some(text)) => Some({id, text})
-            | _ => None
-            }
-          )
-      ),
-  },
+  initialState: () => {nodesDimensions: NodeIdMap.empty, editedNode: None},
 
   reducer: (action: action, s: state) =>
     switch (action) {
