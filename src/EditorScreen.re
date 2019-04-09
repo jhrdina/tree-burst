@@ -45,8 +45,23 @@ let useStyles =
             (),
           ),
       },
+      {
+        name: "shortcuts",
+        styles:
+          ReactDOMRe.Style.make(
+            ~position="absolute",
+            ~bottom="0px",
+            ~left="0px",
+            ~right="0px",
+            ~padding="16px",
+            ~pointerEvents="none",
+            (),
+          ),
+      },
     ]
   );
+
+let rs = ReasonReact.string;
 
 let component = ReasonReact.statelessComponent("MainScreen");
 
@@ -103,6 +118,17 @@ let make = (~model: RootModel.model, ~pushMsg, _children) => {
                  {"Loading..." |> ReasonReact.string}
                </Typography>
              }}
+            <Typography
+              variant=`Caption
+              color=`TextSecondary
+              className=classes##shortcuts>
+              <b> {"Ctrl + Enter: " |> rs} </b>
+              {"Add child, " |> rs}
+              <b> {"Shift + Enter: " |> rs} </b>
+              {"New line in node, " |> rs}
+              <b> {"Backspace/Delete" |> rs} </b>
+              {" (on empty node): Remove node" |> rs}
+            </Typography>
           </div>
         }
       />
