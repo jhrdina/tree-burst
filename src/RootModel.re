@@ -78,19 +78,30 @@ let update = (model, msg) => {
   // Js.log(msg);
   let (model, cmd) =
     switch (msg) {
-    | P2PMsg(p2pMsg) =>
-      let (p2p, cmd) = PM.update(model.p2p, p2pMsg);
-      ({...model, p2p}, cmd |> Cmd.map(p2pMsgToMsg));
-    | P2PGuiMsg(p2pGuiMsg) =>
+    | P2PMsg(p2pMsg)
       // Handle cases when PMGui wants to send a msg to PM
-      let (p2p, p2pCmd) =
-        switch (p2pGuiMsg) {
-        | PMGui.Msg.ReqP2PMsg(p2pMsg) => PM.update(model.p2p, p2pMsg)
-        | _ => (model.p2p, Cmd.none)
-        };
+    | P2PGuiMsg(PMGui.Msg.ReqP2PMsg(p2pMsg)) =>
+      let (p2p, p2pCmd) = PM.update(model.p2p, p2pMsg);
+
       let (p2pGui, p2pGuiCmd) =
         PMGui.PeerScreens.update(
           ~core=p2p |> PM.State.classify,
+          PMGui.Msg.Noop,
+          model.p2pGui,
+        );
+
+      (
+        {...model, p2p, p2pGui},
+        Cmd.batch([
+          p2pCmd |> Cmd.map(p2pMsgToMsg),
+          p2pGuiCmd |> Cmd.map(p2pGuiMsgToMsg),
+        ]),
+      );
+
+    | P2PGuiMsg(p2pGuiMsg) =>
+      let (p2pGui, p2pGuiCmd) =
+        PMGui.PeerScreens.update(
+          ~core=model.p2p |> PM.State.classify,
           p2pGuiMsg,
           model.p2pGui,
         );
@@ -102,13 +113,7 @@ let update = (model, msg) => {
         | _ => model.route
         };
 
-      (
-        {...model, p2p, p2pGui, route},
-        Cmd.batch([
-          p2pCmd |> Cmd.map(p2pMsgToMsg),
-          p2pGuiCmd |> Cmd.map(p2pGuiMsgToMsg),
-        ]),
-      );
+      ({...model, p2pGui, route}, p2pGuiCmd |> Cmd.map(p2pGuiMsgToMsg));
     | Route.Change(route) => ({...model, route}, Cmd.none)
     | _ => (model, Cmd.none)
     };
