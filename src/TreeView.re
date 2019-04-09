@@ -193,6 +193,7 @@ let renderLines = (~classes, layout) => {
       ~position="absolute",
       ~width=Utils.pxOfInt(layout.rect.width),
       ~height=Utils.pxOfInt(layout.rect.height),
+      ~marginBottom="60px",
       (),
     )}>
     {layout.lines

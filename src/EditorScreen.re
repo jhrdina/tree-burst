@@ -92,16 +92,19 @@ let make = (~model: RootModel.model, ~pushMsg, _children) => {
                   {title |> ReasonReact.string}
                 </Typography>
                 <div className=classes##toolbarRightBlock>
-                  <IconButton
-                    color=`Inherit onClick={_ => pushMsg(Route.Change(P2P))}>
-                    <PocketMeshPeerMaterialUi.GlobalIcon
-                      signalState=Connected
-                      peerState=Online
-                    />
-                  </IconButton>
-                  <IconButton color=`Inherit className={classes##leftToolBtn}>
-                    <Icons.MoreVert />
-                  </IconButton>
+                  {switch (p2pTagged) {
+                   | WaitingForDbAndIdentity(_) => ReasonReact.null
+                   | HasIdentity(dbState, runtimeState) =>
+                     <IconButton
+                       color=`Inherit
+                       onClick={_ => pushMsg(Route.Change(P2P))}>
+                       <PocketMeshPeerMaterialUi.GlobalIcon
+                         dbState
+                         runtimeState
+                         groupId={model.openedGroup}
+                       />
+                     </IconButton>
+                   }}
                 </div>
               </Toolbar>
             </AppBar>
