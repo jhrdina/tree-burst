@@ -194,6 +194,8 @@ let renderLines = (~classes, layout) => {
       ~width=Utils.pxOfInt(layout.rect.width),
       ~height=Utils.pxOfInt(layout.rect.height),
       ~marginBottom="60px",
+      ~paddingRight="24px",
+      ~boxSizing="content-box",
       (),
     )}>
     {layout.lines
