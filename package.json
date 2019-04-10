@@ -9,7 +9,7 @@
     "webpack:production": "NODE_ENV=production webpack --display-modules",
     "size-test": "NODE_ENV=production webpack --display-modules && brotli -kf build/Index.js && ( ls -l build/Index.js.br | cut -d\" \" -f5 )",
     "server": "webpack-dev-server",
-    "deploy": "gh-pages --dist build --message Deploy --remote origin"
+    "deploy": "gh-pages --dist build --message Deploy --remote github"
   },
   "keywords": [
     "BuckleScript"
