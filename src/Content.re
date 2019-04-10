@@ -12,6 +12,7 @@ module NodeKeys = {
   let parentId = "parentId";
   let text = "text";
   let children = "children";
+  let deleted = "deleted";
 };
 
 type conflictable('a) = {
@@ -23,6 +24,7 @@ type node = {
   id: string,
   parentId: option(string),
   text: conflictable(string),
+  deleted: bool,
   children: list(string),
 };
 
@@ -73,6 +75,15 @@ let conflictableMap = (mapper, conflictable: PM.Crdt.Json.conflictable) =>
     }
   );
 
+let resolveDeletedConflict = conflictable =>
+  // If there is a single peer that thinks node should stay visible, make it
+  // visible.
+  conflictable.value
+  && !(
+       conflictable.conflicts
+       |> PM.Peer.Id.Map.exists((_peerId, deleted) => !deleted)
+     );
+
 let findNodeById = (nodeId, t) =>
   PM.Crdt.(t |> root |> nodes |?> Json.Map.get(nodeId) |?> Json.Map.ofJson);
 
@@ -86,6 +97,11 @@ let findNodeByIdSafe = (nodeId, t) =>
           node |> Map.get(NodeKeys.id) |?> asString,
           node |> Map.get(NodeKeys.parentId) |?> asString,
           node |> Map.getC(NodeKeys.text) |?> conflictableMap(asString),
+          node
+          |> Map.getC(NodeKeys.deleted)
+          |?> conflictableMap(asBool)
+          |?>> resolveDeletedConflict
+          |? false,
           node
           |> Map.get(NodeKeys.children)
           |?> List.ofJson
@@ -103,8 +119,8 @@ let findNodeByIdSafe = (nodeId, t) =>
           )
           |? [],
         ) {
-        | (Some(id), parentId, Some(text), children) =>
-          Some({id, parentId, text, children})
+        | (Some(id), parentId, Some(text), deleted, children) =>
+          Some({id, parentId, text, deleted, children})
         | _ => None
         };
       }
@@ -201,11 +217,16 @@ let rec removeSubtreeFromNodes = (~nodeId, nodes) => {
          )
     |? nodes
     // Remove myself
-    |> Map.remove(nodeId)
+    |> updateKey(nodeId, node =>
+         node
+         |> Map.ofJson
+         |?>> Map.add(NodeKeys.deleted, bool(true))
+         |?>> Map.toJson
+       )
   );
 };
 
-let deleteChild = (~parentId, ~childId, t) =>
+let deleteChild = (~parentId as _, ~childId, t) =>
   t
   |> PM.Crdt.change("Delete child", root =>
        PM.Crdt.Json.(
@@ -214,26 +235,24 @@ let deleteChild = (~parentId, ~childId, t) =>
               nodes
               |> Map.ofJson
               |?>> removeSubtreeFromNodes(~nodeId=childId)
-              |?>> updateKey(parentId, node =>
-                     node
-                     |> Map.ofJson
-                     |?>> updateKey(NodeKeys.children, children =>
-                            children
-                            |> List.ofJson
-                            |?>> List.filter(id =>
-                                   id
-                                   |> asString
-                                   |?>> (id => id != childId)
-                                   |? true
-                                 )
-                            |?>> List.toJson
-                          )
-                     |?>> Map.toJson
-                   )
               |?>> Map.toJson
             )
        )
      );
+
+let rec foldPredecessors: (('a, node) => 'a, 'a, string, PM.Crdt.t) => 'a =
+  (f, acc, nodeId, crdt) => {
+    switch (crdt |> findNodeByIdSafe(nodeId)) {
+    | Some(node) =>
+      let acc = f(acc, node);
+      switch (node.parentId) {
+      | Some(parentId) => foldPredecessors(f, acc, parentId, crdt)
+      | None => acc
+      };
+
+    | None => acc
+    };
+  };
 
 let updateNodeText = (nodeId, text, t) =>
   t
@@ -249,6 +268,25 @@ let updateNodeText = (nodeId, text, t) =>
                      |?>> Map.add(NodeKeys.text, string(text))
                      |?>> Map.toJson
                    )
+              |?>> (
+                nodes =>
+                  foldPredecessors(
+                    (nodes, node) => {
+                      Js.log("folding node " ++ node.id);
+                      nodes
+                      |> updateKey(node.id, nodeJson =>
+                           nodeJson
+                           |> Map.ofJson
+                           |?>> Map.add(NodeKeys.deleted, bool(true))
+                           |?>> Map.add(NodeKeys.deleted, bool(false))
+                           |?>> Map.toJson
+                         );
+                    },
+                    nodes,
+                    nodeId,
+                    t,
+                  )
+              )
               |?>> Map.toJson
             )
        )
@@ -265,12 +303,13 @@ let getRootNode = crdt =>
 let rec foldNodes: (('a, node) => 'a, 'a, string, PM.Crdt.t) => 'a =
   (f, acc, nodeId, crdt) => {
     switch (crdt |> findNodeByIdSafe(nodeId)) {
-    | Some(node) =>
+    | Some(node) when node.deleted == false =>
       let acc = f(acc, node);
       node.children
       ->Belt.List.reduce(acc, (acc, childId) =>
           foldNodes(f, acc, childId, crdt)
         );
+    | Some(_)
     | None => acc
     };
   };

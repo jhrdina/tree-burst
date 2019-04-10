@@ -218,8 +218,8 @@ let make =
       switch (newSelf.state.nodeText, newSelf.retainedProps.nodeTextInDb) {
       | (curStateText, Some(dbText)) when curStateText != dbText =>
         newSelf.send(UpdateNodeText(dbText))
-      | (curStateText, Some(_)) => ()
-      | (curStateText, None) => newSelf.send(UpdateNodeText(""))
+      | (_curStateText, Some(_)) => /* They're already equal */ ()
+      | (_curStateText, None) => newSelf.send(UpdateNodeText(""))
       };
     },
 
@@ -243,13 +243,8 @@ let make =
                   className=classes##toolbarLeftBtn
                   color=`Inherit
                   onClick={_ => {
-                    switch (
-                      variant,
-                      mContent,
-                      self.retainedProps.nodeTextInDb,
-                    ) {
-                    | (Text(nodeId), Some(content), Some(dbTxt))
-                        when self.state.nodeText != dbTxt =>
+                    switch (variant, mContent) {
+                    | (Text(nodeId), Some(content)) =>
                       pushMsg(
                         RootModel.P2PMsg(
                           PM.Msg.updateGroupContent(
@@ -262,7 +257,7 @@ let make =
                           ),
                         ),
                       )
-                    | (_, _, _) => ()
+                    | (_, _) => ()
                     };
 
                     pushMsg(Route.Change(Editor));

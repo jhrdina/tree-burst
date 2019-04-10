@@ -70,7 +70,11 @@ let rec layoutSubtree =
   let subtreesVBoxPos = (x + thisNodeWidth + nodesHSpace, y);
   // Layout children
   node.children
-  ->Belt.List.keepMap(nodeId => crdt |> Content.findNodeByIdSafe(nodeId))
+  ->Belt.List.keepMap(nodeId =>
+      crdt
+      |> Content.findNodeByIdSafe(nodeId)
+      |?> (node => node.deleted ? None : Some(node))
+    )
   ->Belt.List.reduce(
       (
         // Starting subtree pos
@@ -368,15 +372,17 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                          let handleBlur =
                              (_e, self: ReasonReact.self('a, 'b, 'c)) =>
                            {self.send(DeselectedNode(node.id))
-                            pushMsg(
-                              RootModel.P2PMsg(
-                                PM.Msg.updateGroupContent(
-                                  groupId,
-                                  content
-                                  |> Content.updateNodeText(node.id, text),
+                            if (node.text.value != text) {
+                              pushMsg(
+                                RootModel.P2PMsg(
+                                  PM.Msg.updateGroupContent(
+                                    groupId,
+                                    content
+                                    |> Content.updateNodeText(node.id, text),
+                                  ),
                                 ),
-                              ),
-                            )};
+                              );
+                            }};
 
                          let hasConflict =
                            !(node.text.conflicts |> PM.Peer.Id.Map.is_empty);
@@ -421,6 +427,7 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                              onDelete={() =>
                                switch (node.parentId) {
                                | Some(parentId) =>
+                                 self.send(DeselectedNode(node.id));
                                  pushMsg(
                                    RootModel.P2PMsg(
                                      PM.Msg.updateGroupContent(
@@ -432,7 +439,7 @@ let make = (~groupId, ~model: RootModel.model, ~pushMsg, _children) => {
                                           ),
                                      ),
                                    ),
-                                 )
+                                 );
                                | None => ()
                                }
                              }
