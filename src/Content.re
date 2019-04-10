@@ -271,8 +271,7 @@ let updateNodeText = (nodeId, text, t) =>
               |?>> (
                 nodes =>
                   foldPredecessors(
-                    (nodes, node) => {
-                      Js.log("folding node " ++ node.id);
+                    (nodes, node) =>
                       nodes
                       |> updateKey(node.id, nodeJson =>
                            nodeJson
@@ -280,8 +279,7 @@ let updateNodeText = (nodeId, text, t) =>
                            |?>> Map.add(NodeKeys.deleted, bool(true))
                            |?>> Map.add(NodeKeys.deleted, bool(false))
                            |?>> Map.toJson
-                         );
-                    },
+                         ),
                     nodes,
                     nodeId,
                     t,
