@@ -59,6 +59,8 @@ let init = () => {
     PM.init(
       PM.InitConfig.make(
         ~contentInitializer=Content.initNodes("Hello CRDT World", "AAA"),
+        ~signalServerUrl=Config.signalServerUrl,
+        ~iceServers=Config.iceServers,
         (),
       ),
     );
@@ -79,7 +81,7 @@ let update = (model, msg) => {
   let (model, cmd) =
     switch (msg) {
     | P2PMsg(p2pMsg)
-      // Handle cases when PMGui wants to send a msg to PM
+    // Handle cases when PMGui wants to send a msg to PM
     | P2PGuiMsg(PMGui.Msg.ReqP2PMsg(p2pMsg)) =>
       let (p2p, p2pCmd) = PM.update(model.p2p, p2pMsg);
 
