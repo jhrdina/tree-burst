@@ -1,6 +1,6 @@
 {
   "name": "tree-burst",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "scripts": {
     "build": "bsb -make-world",
     "start": "bsb -make-world -w",
@@ -9,7 +9,7 @@
     "webpack:production": "NODE_ENV=production webpack --display-modules",
     "size-test": "NODE_ENV=production webpack --display-modules && brotli -kf build/Index.js && ( ls -l build/Index.js.br | cut -d\" \" -f5 )",
     "server": "webpack-dev-server",
-    "deploy": "gh-pages --dist build --message Deploy --remote github"
+    "deploy": "gh-pages --dist build --message Deploy"
   },
   "keywords": [
     "BuckleScript"
@@ -22,10 +22,10 @@
     "@material-ui/icons": "^3.0.2",
     "@material-ui/styles": "github:jhrdina/material-ui-styles#build",
     "bs-automerge": "^0.3.4",
-    "bs-black-tea": "^0.2.0",
+    "bs-black-tea": "^0.2.1",
     "bs-css": "^8.0.3",
-    "pocket-mesh-peer": "^0.8.0",
-    "pocket-mesh-peer-material-ui": "^0.8.0",
+    "pocket-mesh-peer": "^0.8.2",
+    "pocket-mesh-peer-material-ui": "^0.8.2",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
     "reason-react": "~0.5.3"
