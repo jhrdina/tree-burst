@@ -147,7 +147,7 @@ let make =
               e |> stopPropagation;
               onAddChild();
             | "Delete"
-            | "Backspace" when text == "" =>
+            | "Backspace" when text == "" || text == "\n" =>
               e |> preventDefault;
               onDelete();
             | _ => ()
